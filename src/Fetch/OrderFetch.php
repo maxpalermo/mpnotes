@@ -61,82 +61,38 @@ class OrderFetch
 
     public function ajaxFetchShowNote($params)
     {
-        $tableName = $params['tableName'];
+        $type = $params['type'];
         $id = $params['id_row'];
+        $id_customer = $params['id_customer'] ?? 0;
+        $id_order = $params['id_order'] ?? 0;
+        $isNew = (bool) $params['new'] ?? false;
+        $uploadDir = '';
 
-        switch ($tableName) {
-            case 'mp_note_customer':
-                $result = $this->newNoteCustomer($params['id_customer'], $id);
-
-                break;
-            case 'mp_note_order':
-                $uploadDir = $params['noteOrderUploadDir'];
-                $result = $this->newNoteOrder($params['id_order'], $id, $uploadDir);
-
-                break;
-            case 'mp_note_embroidery':
-                $uploadDir = $params['noteEmbroideryUploadDir'];
-                $result = $this->newNoteEmbroidery($params['id_customer'], $id, $uploadDir);
-
-                break;
-            default:
-                return Response::json([
-                    'success' => false,
-                    'message' => 'Tabella non valida',
-                ]);
+        if ($type == \ModelMpNote::TYPE_NOTE_CUSTOMER) {
+            $uploadDir = $params['noteCustomerUploadDir'] ?? '';
+        } elseif ($type == \ModelMpNote::TYPE_NOTE_ORDER) {
+            $uploadDir = $params['noteOrderUploadDir'] ?? '';
+        } elseif ($type == \ModelMpNote::TYPE_NOTE_EMBROIDERY) {
+            $uploadDir = $params['noteEmbroideryUploadDir'] ?? '';
         }
+
+        $result = $this->newNote($id, $type, $id_customer, $id_order, $uploadDir, $isNew);
 
         Response::json([
             'success' => true,
             'modal' => $result,
-            'tableName' => $tableName,
+            'tableName' => \ModelMpNote::$definition['table'],
         ]);
     }
 
-    protected function newNoteCustomer($id_customer, $id_row)
+    protected function newNote($id_row, $type, $id_customer, $id_order, $uploadDir, $isNew = false)
     {
-        if (!$id_row) {
-            $id_customer = 0;
-        }
-
-        $tpl = $this->context->smarty->createTemplate($this->module->getLocalPath() . 'views/templates/admin/notes/note_customer.tpl');
+        $tpl = $this->context->smarty->createTemplate($this->module->getLocalPath() . 'views/templates/admin/notes/panelNote.tpl');
         $tpl->assign([
             'link' => $this->context->link,
             'id_customer' => $id_customer,
-            'note' => \ModelMpNoteCustomer::getNote($id_customer, $id_row),
-        ]);
-
-        return $tpl->fetch();
-    }
-
-    protected function newNoteOrder($id_order, $id_row, $uploadDir)
-    {
-        if (!$id_row) {
-            $id_order = 0;
-        }
-
-        $tpl = $this->context->smarty->createTemplate($this->module->getLocalPath() . 'views/templates/admin/notes/note_order.tpl');
-        $tpl->assign([
-            'link' => $this->context->link,
             'id_order' => $id_order,
-            'note' => \ModelMpNoteOrder::getNote($id_order, $id_row),
-            'uploadDir' => $uploadDir,
-        ]);
-
-        return $tpl->fetch();
-    }
-
-    protected function newNoteEmbroidery($id_customer, $id_row, $uploadDir)
-    {
-        if (!$id_row) {
-            $id_customer = 0;
-        }
-
-        $tpl = $this->context->smarty->createTemplate($this->module->getLocalPath() . 'views/templates/admin/notes/note_embroidery.tpl');
-        $tpl->assign([
-            'link' => $this->context->link,
-            'id_customer' => $id_customer,
-            'note' => \ModelMpNoteEmbroidery::getNote($id_customer, $id_row),
+            'note' => \ModelMpNote::getNote($type, $id_customer, $id_order, $id_row, $isNew),
             'uploadDir' => $uploadDir,
         ]);
 

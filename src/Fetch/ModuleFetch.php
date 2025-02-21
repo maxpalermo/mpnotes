@@ -59,78 +59,12 @@ class ModuleFetch
 
             switch ($table) {
                 case 'mp_note_customer':
-                    $sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'mp_note_customer` (
-                        `id_mp_note_customer` int(11) NOT NULL AUTO_INCREMENT,
-                        `id_customer` int(11) NOT NULL,
-                        `id_employee` int(11) NOT NULL,
-                        `note` text NOT NULL,
-                        `date_add` datetime NOT NULL,
-                        `date_upd` datetime NULL,
-                        PRIMARY KEY (`id_mp_note_customer`),
-                        KEY `id_customer` (`id_customer`)
-                    ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
-
                     break;
 
                 case 'mp_note_order':
-                    $sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'mp_note_order` (
-                        `id_mp_note_order` int(11) NOT NULL AUTO_INCREMENT,
-                        `id_employee` int(11) NOT NULL,
-                        `id_order` int(11) NOT NULL,
-                        `note` text NOT NULL,
-                        `deleted` tinyint(1) NOT NULL,
-                        `printable` tinyint(1) NOT NULL,
-                        `chat` tinyint(1) NOT NULL,
-                        `date_add` datetime NOT NULL,
-                        `date_upd` datetime NOT NULL,
-                        PRIMARY KEY (`id_mp_note_order`),
-                        KEY `id_order` (`id_order`)
-                    ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
-
-                    $sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'mp_note_order_file` (
-                        `id_mp_note_order_file` int(11) NOT NULL AUTO_INCREMENT,
-                        `id_mp_note_order` int(11) NOT NULL,
-                        `id_order` int(11) NOT NULL,
-                        `path` varchar(255) NOT NULL,
-                        `filename` varchar(255) NOT NULL,
-                        `filetitle` varchar(255) NOT NULL,
-                        `file_ext` varchar(255) NOT NULL,
-                        `date_add` datetime NOT NULL,
-                        `date_upd` datetime NOT NULL,
-                        PRIMARY KEY (`id_mp_note_order_file`),
-                        KEY `id_mp_note_order` (`id_mp_note_order`)
-                    ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
-
                     break;
 
                 case 'mp_note_embroidery':
-                    $sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'mp_note_embroidery` (
-                        `id_mp_note_embroidery` int(11) NOT NULL AUTO_INCREMENT,
-                        `id_history` int(11) NOT NULL,
-                        `id_customer` int(11) NOT NULL,
-                        `id_employee` int(11) NOT NULL,
-                        `id_order` int(11) NOT NULL,
-                        `note` text NOT NULL,
-                        `printable` tinyint(1) NOT NULL,
-                        `date_add` datetime NOT NULL,
-                        `date_upd` datetime NULL,
-                        `date_del` datetime NULL,
-                        PRIMARY KEY (`id_mp_note_embroidery`),
-                        KEY `id_order` (`id_order`)
-                    ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
-
-                    $sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'mp_note_embroidery_file` (
-                        `id_mp_note_embroidery_file` int(11) NOT NULL AUTO_INCREMENT,
-                        `id_mp_note_embroidery` int(11) NOT NULL,
-                        `id_employee` int(11) NOT NULL,
-                        `path` varchar(255) NOT NULL,
-                        `type` varchar(16) NOT NULL,
-                        `date_add` datetime NOT NULL,
-                        `date_upd` datetime NULL,
-                        PRIMARY KEY (`id_mp_note_embroidery_file`),
-                        KEY `id_mp_note_embroidery` (`id_mp_note_embroidery`)
-                    ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
-
                     break;
 
                 default:

@@ -13,7 +13,7 @@
                                 </span>
                             {else}
                                 <span class="badge-custom badge-custom-success note-count-{$note.type}">
-                                    {$note.note_list|count}
+                                    0
                                 </span>
                             {/if}
                         </div>
@@ -38,7 +38,7 @@
                 <div class="panel-body overflow-y-scroll collapse" id="{$note.type}NotesCollapse">
                     {if isset($note.note_list) && $note.note_list}
                         <table class="table table-condensed table-striped" id="tableNote{$note.type|ucfirst}">
-                            {include file="../admin/partials/tbody/{$note.type}Note.tpl" note_list=$note.note_list}
+                            {$note.note_list}
                         </table>
                     {/if}
                 </div>
@@ -53,4 +53,10 @@
     const noteOrderId = "{$id_order}";
     const noteOrderUploadDir = "{$noteOrderUploadDir}";
     const noteEmbroideryUploadDir = "{$noteEmbroideryUploadDir}";
+
+    document.addEventListener("DOMContentLoaded", function() {
+        updateNoteCount("customer");
+        updateNoteCount("order");
+        updateNoteCount("embroidery");
+    })
 </script>

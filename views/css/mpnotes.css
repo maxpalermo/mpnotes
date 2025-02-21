@@ -154,3 +154,54 @@
     color: #fff;
     background-color: #6c757d;
 }
+
+.carousel {
+    display: flex;
+    justify-content: start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 260px;
+    width: 100%;
+}
+
+.carousel-item {
+    display: block;
+    margin-right: 1rem;
+    width: 160px;
+    height: 240px;
+    max-width: 160px;
+    max-height: 240px;
+}
+
+.carousel-item .carousel-image {
+    border: 1px solid #ddd;
+    overflow-x: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: column;
+    width: 160px;
+    height: 240px;
+    max-width: 160px;
+    max-height: 240px;
+}
+
+.carousel-item .carousel-image img {
+    max-width: 160px;
+    max-height: 240px;
+    object-fit: contain;
+}
+
+.carousel-caption {
+    display: block;
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    text-align: center;
+    padding: 10px;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+}

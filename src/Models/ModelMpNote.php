@@ -60,27 +60,42 @@ class ModelMpNote extends ObjectModel
     ];
 
     /**
-     * Summary of getNote
+     * Retrieves the specified note
      *
-     * @param int $id_customer
+     * @param int $type specifies the type of the note
+     * @param int $id_customer specifies the id of the customer
      * @param int $id_order specifies the id of the order [optional]
      * @param int $id_row specifies the id of the note [optional]
      *
      * @return array returns the note in array
      */
-    public static function getNote($type, $id_customer, $id_order = 0, $id_row = 0)
+    public static function getNote($type, $id_customer, $id_order = 0, $id_row = 0, $isNew = false)
     {
         $employee = Context::getcontext()->employee;
 
         $sql = new DbQuery();
+
         $sql->select('a.*')
             ->select('COALESCE(CONCAT(b.firstname, \' \', b.lastname), \'Sconosciuto\') AS employee ')
             ->from(self::$definition['table'], 'a')
-            ->leftJoin('employee', 'b', 'a.id_employee = b.id_employee')
-            ->where('a.type = ' . (int) $type)
-            ->where('a.id_customer = ' . (int) $id_customer)
-            ->where('a.id_order = ' . (int) $id_order)
-            ->where('a.id_mp_note = ' . (int) $id_row);
+            ->leftJoin('employee', 'b', 'a.id_employee = b.id_employee');
+
+        if ($id_row) {
+            $sql->where('a.id_mp_note = ' . (int) $id_row);
+        } elseif ($type == self::TYPE_NOTE_EMBROIDERY) {
+            $sql->where('a.type = ' . (int) $type);
+            $sql->where('a.id_customer = ' . (int) $id_customer);
+        } elseif ($type == self::TYPE_NOTE_ORDER) {
+            $sql->where('a.type = ' . (int) $type);
+            $sql->where('a.id_order = ' . (int) $id_order);
+        } elseif ($type == self::TYPE_NOTE_CUSTOMER) {
+            $sql->where('a.type = ' . (int) $type);
+            $sql->where('a.id_customer = ' . (int) $id_customer);
+        }
+
+        if ($isNew) {
+            $sql->where('1=0');
+        }
 
         $result = Db::getInstance()->getRow($sql);
 
@@ -100,8 +115,10 @@ class ModelMpNote extends ObjectModel
                 'date_upd' => date('Y-m-d H:i:s'),
                 'employee' => $employee->firstname . ' ' . $employee->lastname,
                 'attachments' => [],
+                'title' => $type == self::TYPE_NOTE_EMBROIDERY ? 'Nota Ricamo' : ($type == self::TYPE_NOTE_ORDER ? 'Nota Ordine' : 'Nota Cliente'),
             ];
         } else {
+            $result['title'] = self::TYPE_NOTE_EMBROIDERY ? 'Nota Ricamo' : ($type == self::TYPE_NOTE_ORDER ? 'Nota Ordine' : 'Nota Cliente');
             $result['attachments'] = ModelMpNoteAttachment::getAttachments($result['id_mp_note']);
         }
 
@@ -110,14 +127,17 @@ class ModelMpNote extends ObjectModel
 
     /**
      * Summary of getList
+     * Retrieves all notes for a customer, an order and a search text
+     * and format result into a tbody html
      *
+     * @param int $type
      * @param int $id_customer
      * @param int $id_order
      * @param string $text
      *
      * @return string List of notes in HTML format, returns tbody
      */
-    public static function getList($id_customer, $id_order, $text)
+    public static function getListNotesTbody($type, $id_customer, $id_order = 0, $text = '')
     {
         $context = Context::getContext();
         $module = Module::getInstanceByName('mpnotes');
@@ -125,10 +145,17 @@ class ModelMpNote extends ObjectModel
         $sql = new DbQuery();
         $sql->select('*')
             ->from(self::$definition['table'])
+            ->where('`type` = ' . (int) $type)
             ->where('`id_customer` = ' . (int) $id_customer)
-            ->where('`id_order` = ' . (int) $id_order)
-            ->where('`note` LIKE \'%' . pSQL($text) . '%\'')
             ->orderBy('`date_add` DESC');
+
+        if ($id_order) {
+            $sql->where('`id_order` = ' . (int) $id_order);
+        }
+
+        if ($text) {
+            $sql->where('`note` LIKE \'%' . pSQL($text) . '%\'');
+        }
         $rows = Db::getInstance()->executeS($sql);
 
         if ($rows) {

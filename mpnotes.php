@@ -180,7 +180,7 @@ class MpNotes extends Module
         }
 
         $tpl = $this->context->smarty->createTemplate($this->getLocalPath() . 'views/templates/hook/summary.tpl');
-        $tpl->assign([
+        $tpl_params = [
             'adminURL' => $this->context->link->getAdminLink('AdminAjax'),
             'noteOrderUploadDir' => $this->getNoteUploadDir('order'),
             'noteEmbroideryUploadDir' => $this->getNoteUploadDir('embroidery'),
@@ -193,7 +193,7 @@ class MpNotes extends Module
                     'icon' => 'person',
                     'title' => 'Note cliente',
                     'table' => 'mp_note_customer',
-                    'note_list' => $this->getNotes('customer', $order->id_customer),
+                    'note_list' => ModelMpNote::getListNotesTbody(ModelMpNote::TYPE_NOTE_CUSTOMER, $order->id_customer),
                 ],
                 'order' => [
                     'id' => $order->id,
@@ -201,7 +201,7 @@ class MpNotes extends Module
                     'icon' => 'shopping_cart',
                     'title' => 'Note ordine',
                     'table' => 'mp_note_order',
-                    'note_list' => $this->getNotes('order', $order->id),
+                    'note_list' => ModelMpNote::getListNotesTbody(ModelMpNote::TYPE_NOTE_ORDER, $order->id_customer, $order->id),
                 ],
                 'embroidery' => [
                     'id' => $order->id_customer,
@@ -209,10 +209,12 @@ class MpNotes extends Module
                     'icon' => 'content_cut',
                     'title' => 'Note ricami',
                     'table' => 'mp_note_embroidery',
-                    'note_list' => $this->getNotes('embroidery', $order->id_customer),
+                    'note_list' => ModelMpNote::getListNotesTbody(ModelMpNote::TYPE_NOTE_EMBROIDERY, $order->id_customer, 0),
                 ],
             ],
-        ]);
+        ];
+
+        $tpl->assign($tpl_params);
 
         return $tpl->fetch();
     }
