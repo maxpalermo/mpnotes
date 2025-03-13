@@ -50,6 +50,8 @@ class MpNotes extends Module
     {
         return parent::install()
             && $this->registerHook('actionAdminControllerSetMedia')
+            && $this->registerHook('actionOrderGridDefinitionModifier')
+            && $this->registerHook('actionOrderGridQueryBuilderModifier')
             && $this->registerHook('displayAdminEndContent')
             && $this->registerHook('displayAdminOrder')
             && $this->registerHook('displayAdminOrderTop')
@@ -137,11 +139,13 @@ class MpNotes extends Module
     {
         $controller = $this->context->controller->controller_name;
 
-        if ($controller === 'AdminCustomerNotes'
+        if (
+            $controller === 'AdminCustomerNotes'
             || $controller === 'AdminOrderNotes'
             || $controller === 'AdminEmbroideryNotes'
             || ($controller === 'AdminModules' && Tools::getValue('configure') == $this->name)
-            || $controller === 'AdminOrders') {
+            || $controller === 'AdminOrders'
+        ) {
             // Add SweetAlert2
             $this->context->controller->addJS('https://cdn.jsdelivr.net/npm/sweetalert2@11');
 
@@ -157,6 +161,48 @@ class MpNotes extends Module
 
         if (Tools::strtolower($controller) === 'adminorders') {
             $this->context->controller->addJS($this->_path . 'views/js/order/order-handle.js', 1001);
+        }
+    }
+
+    public function hookActionOrderGridDefinitionModifier($params)
+    {
+        /** @var \PrestaShop\PrestaShop\Core\Grid\Definition\GridDefinition $definition */
+        $definition = $params['definition'];
+
+        // Aggiungi una nuova colonna per mostrare il numero di note per ordine
+        $definition->getColumns()->addAfter(
+            'payment',
+            (new \PrestaShop\PrestaShop\Core\Grid\Column\Type\Common\HtmlColumn('notes_count'))
+                ->setName($this->trans('Note', [], 'Modules.Mpnotes.Admin'))
+                ->setOptions([
+                    'field' => 'notes_count',
+                    'alignment' => 'center', // Centra il contenuto della colonna
+                    'sortable' => false, // Disabilita l'ordinamento
+                ])
+        );
+    }
+
+    public function hookActionOrderGridQueryBuilderModifier($params)
+    {
+        /** @var \Doctrine\DBAL\Query\QueryBuilder $searchQueryBuilder */
+        $searchQueryBuilder = $params['search_query_builder'];
+
+        // Verifica che la tabella mp_note esista prima di aggiungere la subquery
+        $tableExists = \Db::getInstance()->executeS(
+            'SHOW TABLES LIKE \'' . _DB_PREFIX_ . 'mp_note\''
+        );
+
+        if (!empty($tableExists)) {
+            // Usa direttamente la subquery nel calcolo per evitare problemi con gli alias
+            $noteCountSubquery = '(SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'mp_note` n WHERE ((n.id_customer = o.id_customer AND n.type IN (1,2)) OR (n.id_order = o.id_order AND n.type = 3)) AND n.deleted = 0)';
+
+            // Formatta il conteggio come HTML con badge
+            $searchQueryBuilder->addSelect(
+                "IF({$noteCountSubquery} > 0, CONCAT('<div class=\"text-center\"><span class=\"badge\" style=\"background-color: #007bff; color: #fcfcfc; padding: 6px; font-size: .90rem; border-radius: 50%;min-width: 24px; min-height: 24px;\">', {$noteCountSubquery}, '</span></div>'), '<div class=\"text-center\">0</div>') AS notes_count"
+            );
+        } else {
+            // Se la tabella non esiste, aggiungi comunque il campo ma con valore 0
+            $searchQueryBuilder->addSelect("'<div class=\"text-center\">0</div>' AS notes_count");
         }
     }
 
@@ -189,27 +235,30 @@ class MpNotes extends Module
             'notes' => [
                 'customer' => [
                     'id' => $order->id_customer,
-                    'type' => 'customer',
+                    'type' => ModelMpNote::TYPE_NOTE_CUSTOMER,
                     'icon' => 'person',
                     'title' => 'Note cliente',
                     'table' => 'mp_note_customer',
                     'note_list' => ModelMpNote::getListNotesTbody(ModelMpNote::TYPE_NOTE_CUSTOMER, $order->id_customer),
+                    'note_count' => ModelMpNote::getNoteCount(ModelMpNote::TYPE_NOTE_CUSTOMER, $order->id_customer),
                 ],
                 'order' => [
                     'id' => $order->id,
-                    'type' => 'order',
+                    'type' => ModelMpNote::TYPE_NOTE_ORDER,
                     'icon' => 'shopping_cart',
                     'title' => 'Note ordine',
                     'table' => 'mp_note_order',
                     'note_list' => ModelMpNote::getListNotesTbody(ModelMpNote::TYPE_NOTE_ORDER, $order->id_customer, $order->id),
+                    'note_count' => ModelMpNote::getNoteCount(ModelMpNote::TYPE_NOTE_ORDER, $order->id_customer, $order->id),
                 ],
                 'embroidery' => [
                     'id' => $order->id_customer,
-                    'type' => 'embroidery',
+                    'type' => ModelMpNote::TYPE_NOTE_EMBROIDERY,
                     'icon' => 'content_cut',
                     'title' => 'Note ricami',
                     'table' => 'mp_note_embroidery',
                     'note_list' => ModelMpNote::getListNotesTbody(ModelMpNote::TYPE_NOTE_EMBROIDERY, $order->id_customer, 0),
+                    'note_count' => ModelMpNote::getNoteCount(ModelMpNote::TYPE_NOTE_EMBROIDERY, $order->id_customer, 0),
                 ],
             ],
         ];
@@ -305,14 +354,14 @@ class MpNotes extends Module
     protected function getNotes($type, $ref)
     {
         switch ($type) {
-            case 'customer':
+            case ModelMpNote::TYPE_NOTE_CUSTOMER:
                 $sql = 'SELECT * FROM `'
                     . _DB_PREFIX_ . 'mp_note_customer` '
                     . 'WHERE id_customer=' . (int) $ref
                     . ' ORDER BY date_add DESC';
 
                 break;
-            case 'order':
+            case ModelMpNote::TYPE_NOTE_ORDER:
                 $sql = new DbQuery();
                 $sql->select('a.*')
                     ->from('mp_note_order', 'a')
@@ -322,7 +371,7 @@ class MpNotes extends Module
                 $sql = $sql->build();
 
                 break;
-            case 'embroidery':
+            case ModelMpNote::TYPE_NOTE_EMBROIDERY:
                 $sql = new DbQuery();
                 $sql->select('a.*')
                     ->from('mp_note_embroidery', 'a')
@@ -335,15 +384,15 @@ class MpNotes extends Module
         }
 
         $rows = Db::getInstance()->executeS($sql);
-        if ($type == 'order') {
+        if ($type == ModelMpNote::TYPE_NOTE_ORDER) {
             foreach ($rows as &$row) {
-                $row['attachments'] = ModelMpNoteOrderFile::getAttachments($row['id_mp_note_order']);
+                $row['attachments'] = ModelMpNoteAttachment::getAttachments($row['id_mp_note_order']);
             }
         }
-        if ($type == 'embroidery') {
+        if ($type == ModelMpNote::TYPE_NOTE_EMBROIDERY) {
             foreach ($rows as &$row) {
                 $row['link'] = Context::getContext()->link->getAdminLink('AdminOrders', true, [], ['id_order' => $row['id_order'], 'vieworder' => 1]);
-                $row['attachments'] = ModelMpNoteEmbroideryFile::getAttachments($row['id_mp_note_embroidery']);
+                $row['attachments'] = ModelMpNoteAttachment::getAttachments($row['id_mp_note_embroidery']);
             }
         }
 

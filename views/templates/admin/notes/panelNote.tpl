@@ -17,13 +17,15 @@
                 <form id="panelNoteForm">
                     <input type="hidden" name="noteType" id="noteType" value="{$note.type|intval}">
                     <input type="hidden" name="noteId" id="noteId" value="{$note.id_mp_note|intval}">
+                    <input type="hidden" name="noteCustomerId" id="noteCustomerId" value="{$note.id_customer|intval}">
+                    <input type="hidden" name="noteOrderId" id="noteOrderId" value="{$note.id_order|intval}">
                     <div class="form-group">
                         <label for="noteText">{l s='Nota' mod='mpnotes'}</label>
-                        <textarea class="form-control" id="noteText" rows="3" required>{$note.note}</textarea>
+                        <textarea class="form-control" id="noteText" name="noteText" rows="3" required>{$note.note}</textarea>
                     </div>
                     <div class="form-group">
                         <label for="noteAlert">{l s='Tipo' mod='mpnotes'}</label>
-                        <select class="form-control" id="noteAlert">
+                        <select class="form-control" id="noteAlert" name="noteAlert">
                             <option value="1" {if $note.alert==1}selected{/if}>{l s='Informazione' mod='mpnotes'}</option>
                             <option value="2" {if $note.alert==2}selected{/if}>{l s='Importante' mod='mpnotes'}</option>
                             <option value="3" {if $note.alert==3}selected{/if}>{l s='Avviso' mod='mpnotes'}</option>
@@ -53,7 +55,7 @@
                     </div>
                 </form>
             </div>
-            {if isset($note.attachments) && $note.attachments}
+            {if !isNew || (isset($note.attachments) && $note.attachments)}
                 <div class="modal-body" id="attachments-div">
                     <div class="form-group mb-2">
                         <div class="row" style="display: flex; justify-content: space-between;">
@@ -62,7 +64,7 @@
                                     <input type="file" class="custom-file-input" id="newAttachment" name="newAttachment">
                                     <label class="custom-file-label" for="newAttachment">{l s='Scegli file' mod='mpnotes'}</label>
                                 </div>
-                                <button type="button" class="btn btn-primary btn-sm mt-2" id="addAttachment" data-type="embroidery">
+                                <button type="button" class="btn btn-primary btn-sm mt-2" id="addAttachment" data-type="{$note.type}">
                                     {l s='Aggiungi allegato' mod='mpnotes'}
                                 </button>
                             </div>
@@ -101,7 +103,7 @@
             {/if}
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">{l s='Chiudi' mod='mpnotes'}</button>
-                {if $note.id_mp_note == 0}
+                {if $note.id_mp_note == 0 || $showSave}
                     <button type="button" class="btn btn-primary" id="btnSaveNote">{l s='Salva' mod='mpnotes'}</button>
                 {/if}
             </div>

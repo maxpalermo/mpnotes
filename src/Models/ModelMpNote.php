@@ -38,7 +38,6 @@ class ModelMpNote extends ObjectModel
     public $deleted;
     public $date_add;
     public $date_upd;
-    public $date_del;
 
     public static $definition = [
         'table' => 'mp_note',
@@ -55,7 +54,6 @@ class ModelMpNote extends ObjectModel
             'deleted' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => false, 'default' => 0],
             'date_add' => ['type' => self::TYPE_DATE, 'validate' => 'isDateFormat'],
             'date_upd' => ['type' => self::TYPE_DATE, 'validate' => 'isDateFormat', 'required' => false],
-            'date_del' => ['type' => self::TYPE_DATE, 'validate' => 'isDateFormat', 'required' => false],
         ],
     ];
 
@@ -69,7 +67,7 @@ class ModelMpNote extends ObjectModel
      *
      * @return array returns the note in array
      */
-    public static function getNote($type, $id_customer, $id_order = 0, $id_row = 0, $isNew = false)
+    public static function getNote($noteTypeId, $id_customer, $id_order = 0, $id_row = 0, $isNew = false)
     {
         $employee = Context::getcontext()->employee;
 
@@ -82,14 +80,14 @@ class ModelMpNote extends ObjectModel
 
         if ($id_row) {
             $sql->where('a.id_mp_note = ' . (int) $id_row);
-        } elseif ($type == self::TYPE_NOTE_EMBROIDERY) {
-            $sql->where('a.type = ' . (int) $type);
+        } elseif ($noteTypeId == self::TYPE_NOTE_EMBROIDERY) {
+            $sql->where('a.type = ' . (int) $noteTypeId);
             $sql->where('a.id_customer = ' . (int) $id_customer);
-        } elseif ($type == self::TYPE_NOTE_ORDER) {
-            $sql->where('a.type = ' . (int) $type);
+        } elseif ($noteTypeId == self::TYPE_NOTE_ORDER) {
+            $sql->where('a.type = ' . (int) $noteTypeId);
             $sql->where('a.id_order = ' . (int) $id_order);
-        } elseif ($type == self::TYPE_NOTE_CUSTOMER) {
-            $sql->where('a.type = ' . (int) $type);
+        } elseif ($noteTypeId == self::TYPE_NOTE_CUSTOMER) {
+            $sql->where('a.type = ' . (int) $noteTypeId);
             $sql->where('a.id_customer = ' . (int) $id_customer);
         }
 
@@ -99,10 +97,17 @@ class ModelMpNote extends ObjectModel
 
         $result = Db::getInstance()->getRow($sql);
 
+        $noteTypes = [
+            "Sconosciuto",
+            "Nota Cliente",
+            "Nota Ricamo",
+            "Nota Ordine"
+        ];
+
         if (!$result) {
             return [
                 'id_mp_note' => 0,
-                'type' => $type,
+                'type' => $noteTypeId,
                 'id_customer' => $id_customer,
                 'id_employee' => (int) Context::getcontext()->employee->id,
                 'id_order' => $id_order,
@@ -115,14 +120,39 @@ class ModelMpNote extends ObjectModel
                 'date_upd' => date('Y-m-d H:i:s'),
                 'employee' => $employee->firstname . ' ' . $employee->lastname,
                 'attachments' => [],
-                'title' => $type == self::TYPE_NOTE_EMBROIDERY ? 'Nota Ricamo' : ($type == self::TYPE_NOTE_ORDER ? 'Nota Ordine' : 'Nota Cliente'),
+                'title' => $noteTypes[$noteTypeId],
             ];
         } else {
-            $result['title'] = self::TYPE_NOTE_EMBROIDERY ? 'Nota Ricamo' : ($type == self::TYPE_NOTE_ORDER ? 'Nota Ordine' : 'Nota Cliente');
+            $result['title'] = $noteTypes[$noteTypeId];
             $result['attachments'] = ModelMpNoteAttachment::getAttachments($result['id_mp_note']);
         }
 
         return $result;
+    }
+
+    /**
+     * Retrieves the count of notes for a customer, an order
+     *
+     * @param int $type
+     * @param int $id_customer
+     * @param int $id_order
+     *
+     * @return int
+     */
+    public static function getNoteCount($type, $id_customer = 0, $id_order = 0)
+    {
+        $sql = new DbQuery();
+        $sql->select('COUNT(*)')
+            ->from(self::$definition['table'], 'a')
+            ->where('`type` = ' . (int) $type);
+        if ($id_customer) {
+            $sql->where('`id_customer` = ' . (int) $id_customer);
+        }
+        if ($id_order && $type == self::TYPE_NOTE_ORDER) {
+            $sql->where('`id_order` = ' . (int) $id_order);
+        }
+
+        return (int) Db::getInstance()->getValue($sql);
     }
 
     /**
@@ -149,7 +179,7 @@ class ModelMpNote extends ObjectModel
             ->where('`id_customer` = ' . (int) $id_customer)
             ->orderBy('`date_add` DESC');
 
-        if ($id_order) {
+        if ($id_order && $type == self::TYPE_NOTE_ORDER) {
             $sql->where('`id_order` = ' . (int) $id_order);
         }
 
@@ -160,13 +190,51 @@ class ModelMpNote extends ObjectModel
 
         if ($rows) {
             foreach ($rows as &$row) {
+                $row['link'] = $context->link->getAdminLink('AdminOrders', true, [], ['id_order' => $row['id_order'], 'vieworder' => 1]);
+                $row['type'] = (int) $type;
                 $row['attachments'] = ModelMpNoteAttachment::getAttachments($row['id_mp_note']);
-                $row['link'] = Context::getContext()->link->getAdminLink('AdminOrders', true, [], ['id_order' => $row['id_order'], 'vieworder' => 1]);
             }
         }
 
-        $tpl = $context->smarty->createTemplate($module->getLocalPath() . 'views/templates/admin/partials/tbody/tbodyNote.tpl');
+        $path = $module->getLocalPath() . 'views/templates/admin/partials/tbody/tbodyNote.tpl';
+        $tpl = $context->smarty->createTemplate($path);
         $tpl->assign('note_list', $rows);
+
+        return $tpl->fetch();
+    }
+
+    public static function showNote($noteId, $rowId, $tableName, $noteTypeId, $uploadDir, $isNew = false)
+    {
+        $module = Module::getInstanceByName('mpnotes');
+        $context = Context::getContext();
+        $path = $module->getLocalPath() . 'views/templates/admin/notes/panelNote.tpl';
+
+        switch ($noteTypeId) {
+            case self::TYPE_NOTE_EMBROIDERY:
+                $id_order = 0;
+                $id_customer = $noteId;
+                break;
+            case self::TYPE_NOTE_ORDER:
+                $id_order = $noteId;
+                $id_customer = 0;
+                break;
+            case self::TYPE_NOTE_CUSTOMER:
+                $id_order = 0;
+                $id_customer = $noteId;
+                break;
+        }
+
+        $tpl = $context->smarty->createTemplate($path);
+        $tpl->assign([
+            'link' => $context->link,
+            'id_customer' => $id_customer,
+            'id_order' => $id_order,
+            'note' => self::getNote($noteTypeId, $id_customer, $id_order, $rowId, $isNew),
+            'showSave' => $noteTypeId == self::TYPE_NOTE_EMBROIDERY,
+            'uploadDir' => $uploadDir,
+            'tableName' => $tableName,
+            'isNew' => $isNew,
+        ]);
 
         return $tpl->fetch();
     }

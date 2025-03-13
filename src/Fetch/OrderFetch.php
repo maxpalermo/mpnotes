@@ -59,24 +59,73 @@ class OrderFetch
         ]);
     }
 
-    public function ajaxFetchShowNote($params)
+    /**
+     * Gestisce l'azione personalizzata dalla griglia degli ordini
+     * 
+     * @param array $params Parametri della richiesta
+     * @return void
+     */
+    public function ajaxFetchCustomAction($params)
     {
-        $type = $params['type'];
-        $id = $params['id_row'];
-        $id_customer = $params['id_customer'] ?? 0;
-        $id_order = $params['id_order'] ?? 0;
-        $isNew = (bool) $params['new'] ?? false;
-        $uploadDir = '';
+        $id_order = (int) $params['id_order'];
 
-        if ($type == \ModelMpNote::TYPE_NOTE_CUSTOMER) {
-            $uploadDir = $params['noteCustomerUploadDir'] ?? '';
-        } elseif ($type == \ModelMpNote::TYPE_NOTE_ORDER) {
-            $uploadDir = $params['noteOrderUploadDir'] ?? '';
-        } elseif ($type == \ModelMpNote::TYPE_NOTE_EMBROIDERY) {
-            $uploadDir = $params['noteEmbroideryUploadDir'] ?? '';
+        if (!$id_order) {
+            Response::json([
+                'success' => false,
+                'message' => 'ID ordine mancante',
+            ]);
         }
 
-        $result = $this->newNote($id, $type, $id_customer, $id_order, $uploadDir, $isNew);
+        // Qui puoi implementare la tua logica personalizzata
+        // Ad esempio, puoi recuperare informazioni sull'ordine
+        $order = new \Order($id_order);
+
+        if (!\Validate::isLoadedObject($order)) {
+            Response::json([
+                'success' => false,
+                'message' => 'Ordine non trovato',
+            ]);
+        }
+
+        // Esempio di risposta con dati dell'ordine
+        Response::json([
+            'success' => true,
+            'message' => 'Azione personalizzata eseguita con successo',
+            'order_info' => [
+                'id' => $order->id,
+                'reference' => $order->reference,
+                'total_paid' => $order->total_paid,
+                'date_add' => $order->date_add,
+                // Aggiungi altri dati dell'ordine che ti servono
+            ],
+        ]);
+    }
+
+    public function getUploadDir($type)
+    {
+        switch ($type) {
+            case \ModelMpNote::TYPE_NOTE_CUSTOMER:
+                return _PS_UPLOAD_DIR_ . 'mpnotes/customer';
+            case \ModelMpNote::TYPE_NOTE_ORDER:
+                return _PS_UPLOAD_DIR_ . 'mpnotes/order';
+            case \ModelMpNote::TYPE_NOTE_EMBROIDERY:
+                return _PS_UPLOAD_DIR_ . 'mpnotes/embroidery';
+        }
+
+        return '';
+    }
+
+    public function ajaxFetchShowNote($params)
+    {
+        $noteTypeId = (int) $params['type'];
+        $noteId = $params['id'] ?? 0;
+        $rowId = $params['id_row'] ?? 0;
+        $tableName = $params['tableName'] ?? '';
+        $isNew = (bool) $params['new'] ?? false;
+
+        $uploadDir = $this->getUploadDir($noteTypeId);
+
+        $result = \ModelMpNote::showNote($noteId, $rowId, $tableName, $noteTypeId, $uploadDir, $isNew);
 
         Response::json([
             'success' => true,
@@ -85,19 +134,60 @@ class OrderFetch
         ]);
     }
 
-    protected function newNote($id_row, $type, $id_customer, $id_order, $uploadDir, $isNew = false)
+    public function getNoteTypeId($type)
     {
-        $tpl = $this->context->smarty->createTemplate($this->module->getLocalPath() . 'views/templates/admin/notes/panelNote.tpl');
-        $tpl->assign([
-            'link' => $this->context->link,
-            'id_customer' => $id_customer,
-            'id_order' => $id_order,
-            'note' => \ModelMpNote::getNote($type, $id_customer, $id_order, $id_row, $isNew),
-            'uploadDir' => $uploadDir,
-        ]);
+        switch ($type) {
+            case "customer":
+                return \ModelMpNote::TYPE_NOTE_CUSTOMER;
+            case "order":
+                return \ModelMpNote::TYPE_NOTE_ORDER;
+            case "embroidery":
+                return \ModelMpNote::TYPE_NOTE_EMBROIDERY;
+        }
 
-        return $tpl->fetch();
+        return 0;
     }
+
+    public function ajaxFetchSaveNote($params)
+    {
+        $note = $params['note'];
+        $noteId = $note['noteId'];
+        $fields = [
+            'type' => $this->getNoteTypeId($note['noteType']),
+            'id_customer' => (int) $note['noteCustomerId'],
+            'id_employee' => (int) $this->context->employee->id,
+            'id_order' => (int) $note['noteOrderId'],
+            'note' => $note['noteText'],
+            'alert' => (int) $note['noteAlert'],
+            'printable' => (int) $note['notePrintable'],
+            'chat' => (int) $note['noteChat'],
+            'deleted' => 0,
+        ];
+
+        $model = new \ModelMpNote($noteId);
+        $model->hydrate($fields);
+
+        try {
+            if (\Validate::isLoadedObject($model)) {
+                $result = $model->update();
+            } else {
+                $result = $model->add();
+            }
+        } catch (\Throwable $th) {
+            Response::json([
+                'success' => false,
+                'message' => $th->getMessage(),
+            ]);
+        }
+
+        Response::json([
+            'success' => $result,
+            'message' => 'Nota salvata',
+            'tbody' => \ModelMpNote::getListNotesTbody($fields['type'], $fields['id_customer'], $fields['id_order'], $fields['note']),
+        ]);
+    }
+
+
 
     public function ajaxFetchSaveNoteCustomer($params)
     {
@@ -296,24 +386,12 @@ class OrderFetch
 
     public function ajaxFetchUpdateSearch($params)
     {
-        $id = $params['id'];
         $text = $params['text'];
-        $type = $params['type'];
+        $type = (int) $params['type'];
+        $id_customer = (int) $params['id_customer'];
+        $id_order = (int) $params['id_order'];
 
-        switch ($type) {
-            case 'customer':
-                $list = \ModelMpNoteCustomer::getList($id, $text);
-
-                break;
-            case 'order':
-                $list = \ModelMpNoteOrder::getList($id, $text);
-
-                break;
-            case 'embroidery':
-                $list = \ModelMpNoteEmbroidery::getList($id, $text);
-
-                break;
-        }
+        $list = \ModelMpNote::getListNotesTbody($type, $id_customer, $id_order, $text);
 
         Response::json([
             'success' => true,

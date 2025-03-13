@@ -1,13 +1,79 @@
+// Funzione per gestire l'azione personalizzata nella griglia degli ordini
+async function handleCustomAction(orderId) {
+    // Mostra un messaggio di conferma
+    Swal.fire({
+        title: "Azione personalizzata",
+        text: `Stai eseguendo un'azione personalizzata per l'ordine #${orderId}`,
+        icon: "info",
+        showCancelButton: true,
+        confirmButtonText: "Procedi",
+        cancelButtonText: "Annulla"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Qui puoi implementare la tua logica personalizzata
+            // Ad esempio, puoi fare una chiamata AJAX al server
+            fetch(adminURL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({
+                    ajax: 1,
+                    action: "customAction",
+                    id_order: orderId
+                })
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    Swal.fire({
+                        title: "Completato",
+                        text: "Azione personalizzata completata con successo!",
+                        icon: "success"
+                    });
+                })
+                .catch((error) => {
+                    Swal.fire({
+                        title: "Errore",
+                        text: "Si è verificato un errore durante l'esecuzione dell'azione personalizzata.",
+                        icon: "error"
+                    });
+                });
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", (e) => {
+    // Aggiungi un event listener per il pulsante di azione personalizzata nella griglia degli ordini
+    const orderGrid = document.querySelector(".js-order-grid-table");
+    if (orderGrid) {
+        orderGrid.addEventListener("click", (event) => {
+            // Verifica se l'elemento cliccato è il pulsante di azione personalizzata
+            const customActionBtn = event.target.closest(".btn-customAction");
+            if (customActionBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                // Ottieni l'ID dell'ordine dalla riga della tabella
+                const row = customActionBtn.closest("tr");
+                const orderId = row.dataset.orderId || row.querySelector("td[data-order-id]")?.dataset.orderId;
+
+                // Esegui l'azione personalizzata
+                if (orderId) {
+                    handleCustomAction(orderId);
+                }
+            }
+        });
+    }
+
     document.querySelectorAll(".search-bar").forEach((el) => {
         el.addEventListener("input", (e) => {
             e.stopPropagation();
             e.stopImmediatePropagation();
             const text = e.target.value;
-            const type = e.target.dataset.type;
-            const id = e.target.closest(".search-bar").dataset.id;
+            const type = e.target.closest("div.panel").dataset.type;
 
-            updateSearch(id, text, type);
+            updateSearch(text, type);
         });
     });
 
@@ -23,18 +89,22 @@ document.addEventListener("DOMContentLoaded", (e) => {
         });
     });
 
+    //CLICK SU NUOVA NOTA
     document.querySelectorAll(".btn-new-note").forEach((btn) => {
         btn.addEventListener("click", (e) => {
             e.stopPropagation();
             e.stopImmediatePropagation();
 
-            const tableName = e.target.closest("button").dataset.table;
-            newNote(tableName);
+            const noteTableName = e.target.closest("div.panel").dataset.table;
+            const noteType = e.target.closest("div.panel").dataset.type;
+            const noteId = e.target.closest("div.panel").dataset.id;
+
+            newNote(noteTableName, noteType, noteId);
         });
     });
 });
 
-async function updateSearch(id, text, type) {
+async function updateSearch(text, type) {
     const response = await fetch(adminURL, {
         method: "POST",
         headers: {
@@ -44,41 +114,35 @@ async function updateSearch(id, text, type) {
         body: JSON.stringify({
             ajax: 1,
             action: "updateSearch",
-            id: id,
             text: text,
-            type: type
+            type: type,
+            id_customer: noteCustomerId,
+            id_order: noteOrderId
         })
     });
 
     const data = await response.json();
 
-    switch (type) {
-        case "customer":
-            document.getElementById("tableNoteCustomer").querySelector("tbody").innerHTML = data.tbody;
-            rebindTable("tableNoteCustomer");
-            break;
-        case "order":
-            document.getElementById("tableNoteOrder").querySelector("tbody").innerHTML = data.tbody;
-            rebindTable("tableNoteOrder");
-            break;
-        case "embroidery":
-            document.getElementById("tableNoteEmbroidery").querySelector("tbody").innerHTML = data.tbody;
-            rebindTable("tableNoteEmbroidery");
-            break;
-    }
+    document.getElementById("tableNote-" + type).querySelector("tbody").innerHTML = data.tbody;
+    rebindTable("tableNote-" + type);
 }
 
 function rebindTable(table) {
     document
         .getElementById(table)
-        .querySelector("tbody tr")
-        .addEventListener("click", (e) => {
-            e.stopPropagation();
-            e.stopImmediatePropagation();
+        .querySelectorAll("tbody tr")
+        .forEach((tr) => {
+            tr.addEventListener("click", (e) => {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
 
-            const id = e.target.closest("tr").dataset.id;
-            const tableName = "mp_note_" + e.target.closest("tr").dataset.type;
-            getNote(tableName, id);
+                const id = e.target.closest("tr").dataset.id;
+                const tableName = "mp_note_" + e.target.closest("tr").dataset.type;
+                noteType = e.target.closest("tr").dataset.type;
+                console.log("GetNote", tableName, id, noteType);
+
+                getNote(tableName, id);
+            });
         });
 }
 
@@ -101,20 +165,6 @@ function ucFirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function updateNoteCount(type) {
-    const table = "tableNote" + ucFirst(type);
-    const rows = document.getElementById(table).querySelector("tbody").rows.length;
-    if (rows == 0) {
-        document.querySelector(".note-count-" + type).innerHTML = rows;
-        document.querySelector(".note-count-" + type).classList.remove("badge-custom-success");
-        document.querySelector(".note-count-" + type).classList.add("badge-custom-danger");
-    } else {
-        document.querySelector(".note-count-" + type).innerHTML = rows;
-        document.querySelector(".note-count-" + type).classList.remove("badge-custom-danger");
-        document.querySelector(".note-count-" + type).classList.add("badge-custom-success");
-    }
-}
-
 async function saveNote(note) {
     $("#panelNoteModal").modal("hide"); // Hide the modal
     showSwalLoading();
@@ -124,6 +174,8 @@ async function saveNote(note) {
         action: "saveNote",
         note: note
     };
+
+    console.log("call save note", adminURL, data);
 
     const response = await fetch(adminURL, {
         method: "POST",
@@ -140,15 +192,12 @@ async function saveNote(note) {
         if (note.type == 1) {
             document.getElementById("tableNoteCustomer").querySelector("tbody").innerHTML = result.tbody;
             rebindTable("tableNoteCustomer");
-            updateNoteCount(note.type);
         } else if (note.type == 2) {
             document.getElementById("tableNoteEmbroidery").querySelector("tbody").innerHTML = result.tbody;
             rebindTable("tableNoteEmbroidery");
-            updateNoteCount(note.type);
         } else if (note.type == 3) {
             document.getElementById("tableNoteOrder").querySelector("tbody").innerHTML = result.tbody;
             rebindTable("tableNoteOrder");
-            updateNoteCount(note.type);
         }
 
         swal.hideLoading();
@@ -193,44 +242,7 @@ async function doTest(id, type) {
     });
 }
 
-async function handleSaveNoteClick() {
-    const modalId = "#panelNoteModal";
-    const btnId = "btnSaveNote";
-
-    try {
-        document.getElementById(btnId).addEventListener("click", (e) => {
-            const note = {
-                noteId: $("#noteId").val(),
-                noteType: $("#noteType").val(),
-                noteCustomerId: noteCustomerId,
-                noteOrderId: noteOrderId,
-                noteText: $("#noteText").val(),
-                noteAlert: $("#noteAlert").val(),
-                notePrintable: $("input[name=notePrintable]:checked").val(),
-                noteChat: $("input[name=noteChat]:checked").val()
-            };
-
-            if (note.noteText.trim() === "") {
-                $(modalId).modal("hide"); // Hide the modal
-                Swal.fire({
-                    icon: "error",
-                    title: "Errore",
-                    text: "Il testo della nota non può essere vuoto",
-                    confirmButtonText: "OK"
-                }).then(() => {
-                    $(modalId).modal("show"); // Show the modal
-                });
-                return false;
-            }
-
-            saveNote(note);
-        });
-    } catch (error) {
-        console.log("pulsante SALVA non abilitato");
-    }
-}
-
-async function newNote(type) {
+async function newNote(tableName, type, id) {
     const response = await fetch(adminURL, {
         method: "POST",
         headers: {
@@ -240,12 +252,10 @@ async function newNote(type) {
         body: JSON.stringify({
             ajax: 1,
             action: "showNote",
+            tableName: tableName,
             type: type,
-            id_order: noteOrderId,
-            id_customer: noteCustomerId,
+            id: id,
             id_row: 0,
-            noteOrderUploadDir: noteOrderUploadDir,
-            noteEmbroideryUploadDir: noteEmbroideryUploadDir,
             new: 1
         })
     });
@@ -290,26 +300,30 @@ async function bindNote(modal) {
     //aggiungo il modale al body
     document.body.insertAdjacentHTML("afterbegin", modal);
     $("#panelNoteModal").modal("show");
-    bindAttachments();
-    handleSaveNoteClick();
-}
-
-function bindAttachments() {
-    let attachmentsDiv;
 
     try {
+        console.log("Bind modal note");
         attachmentsDiv = document.getElementById("attachments-div");
+        handleSaveNoteClick();
+        bindAttachments(attachmentsDiv);
     } catch (error) {
         return;
     }
+}
+
+function bindAttachments(attachmentsDiv) {
+    console.log("Bind attachments", attachmentsDiv);
 
     const noteId = parseInt(document.getElementById("noteId").value, 10);
-    const type = document.getElementById("noteType").value;
+    const type = noteType;
 
     if (noteId != 0) {
+        console.log("Note id", noteId, "visible");
         attachmentsDiv.style.display = "block";
     } else {
+        console.log("Note id", noteId, "hidden");
         attachmentsDiv.style.display = "none";
+        return;
     }
 
     document.getElementById("newAttachment").addEventListener("change", function (e) {
@@ -413,10 +427,10 @@ function bindAttachments() {
                     $("#panelNoteModal").remove();
                     if (type == 3) {
                         tableName = "tableNoteOrder";
-                        trType = ".tr-note[data-type=order";
+                        trType = ".tr-note[data-type=order]";
                     } else if (type == 2) {
                         tableName = "tableNoteEmbroidery";
-                        trType = ".tr-note[data-type=embroidery";
+                        trType = ".tr-note[data-type=embroidery]";
                     } else {
                         return;
                     }
@@ -458,4 +472,43 @@ function bindAttachments() {
             }
         });
     });
+}
+
+function handleSaveNoteClick() {
+    const modalId = "#panelNoteModal";
+    const btnId = "btnSaveNote";
+    console.log("Handle save note click");
+
+    try {
+        document.getElementById(btnId).addEventListener("click", (e) => {
+            const note = {
+                noteId: $("#noteId").val(),
+                noteType: noteType,
+                noteCustomerId: noteCustomerId,
+                noteOrderId: noteOrderId,
+                noteText: $("#noteText").val(),
+                noteAlert: $("#noteAlert").val(),
+                notePrintable: $("input[name=notePrintable]:checked").val(),
+                noteChat: $("input[name=noteChat]:checked").val()
+            };
+
+            if (note.noteText.trim() === "") {
+                $(modalId).modal("hide"); // Hide the modal
+                Swal.fire({
+                    icon: "error",
+                    title: "Errore",
+                    text: "Il testo della nota non può essere vuoto",
+                    confirmButtonText: "OK"
+                }).then(() => {
+                    $(modalId).modal("show"); // Show the modal
+                });
+                return false;
+            }
+
+            saveNote(note);
+        });
+        console.log("pulsante SALVA abilitato");
+    } catch (error) {
+        console.log("pulsante SALVA non abilitato");
+    }
 }

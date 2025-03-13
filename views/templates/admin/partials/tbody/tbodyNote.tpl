@@ -21,10 +21,12 @@
                     {/if}
                 </div>
             </td>
-            {if $note.type==1}
+            {if $note.type==1 && $note.id_order}
                 <td style="width: 6rem;">
                     <a class="pointer" target="_blank" href="{$note.link}">{$note.id_order}</a>
                 </td>
+            {else}
+                <td style="width: 6rem;">--</td>
             {/if}
             <td style="width: 6rem;">{$note.date_add|date_format:"%Y-%m-%d %H:%M:%S"}</td>
             <td>{$note.note|escape:'html':'UTF-8'}</td>
