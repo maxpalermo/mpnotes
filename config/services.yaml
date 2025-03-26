@@ -1,0 +1,14 @@
+parameters:
+  database_prefix: _DB_PREFIX_
+
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  MpSoft\MpNotes\Helpers\TableGenerator:
+    tags: ["console.command"]
+    arguments:
+      - "@doctrine.dbal.default_connection"
+      - "%database_prefix%"
