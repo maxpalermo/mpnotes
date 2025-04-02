@@ -1,8 +1,8 @@
-<div class="panel">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <i class="material-icons">flag</i> Gestione Tipi di nota e Attributi
     </div>
-    <div class="panel-body">
+    <div class="card-body">
         <form id="flag-note-form" class="form-horizontal">
             <div class="form-group">
                 <label class="control-label col-lg-3">Nome</label>

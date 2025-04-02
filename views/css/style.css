@@ -233,3 +233,403 @@ progress::-moz-progress-bar {
     clear: both;
     width: 100%;
 }
+
+.swal2-container {
+    z-index: 10000; /* Set to a value higher than the z-index of your modal */
+}
+
+.btn-label-flag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-label-flag:hover {
+    background-color: #f5f5f5 !important;
+    color: #18b92e !important;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn-label-flag.active {
+    background-color: #25b9d7 !important;
+    color: white !important;
+}
+
+.btn-label-flag input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.note-card {
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: none;
+    transition: box-shadow 0.3s ease;
+}
+
+.note-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.note-card .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem;
+    border-radius: 8px 8px 0 0;
+}
+
+.note-card .card-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+    color: #363a41;
+    font-weight: 600;
+}
+
+.note-meta .badge {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.note-meta .badge i {
+    font-size: 1rem;
+    margin-right: 0.25rem;
+}
+
+.note-card .card-body {
+    padding: 1.5rem;
+}
+
+.note-card .form-control-label {
+    font-weight: 600;
+    color: #363a41;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.note-card .form-control {
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    padding: 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.note-card .form-control:focus {
+    border-color: #7cd5e7;
+    box-shadow: 0 0 0 0.2rem rgba(124, 213, 231, 0.25);
+}
+
+.note-card textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.note-card .input-group-text {
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+}
+
+.gravity-icon {
+    font-size: 1.25rem;
+}
+
+.flags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.flag-item {
+    position: relative;
+}
+
+.flag-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.flag-label {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    color: white;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    opacity: 0.75;
+    border: 2px solid transparent;
+}
+
+.flag-label i {
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.flag-label::after {
+    content: "";
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0.8rem 0.8rem 0;
+    border-color: transparent;
+    transition: all 0.2s ease;
+}
+
+.flag-checkbox:checked + .flag-label {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    opacity: 1;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.flag-checkbox:checked + .flag-label::after {
+    border-color: transparent #fff transparent transparent;
+}
+
+.flag-checkbox:focus + .flag-label {
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.attachments-preview {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    min-height: 100px;
+}
+
+.note-card .card-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem;
+    border-radius: 0 0 8px 8px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: #25b9d7;
+    border-color: #25b9d7;
+}
+
+.btn-primary:hover {
+    background-color: #1e94ac;
+    border-color: #1e94ac;
+}
+
+.btn-outline-secondary {
+    color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-outline-primary {
+    color: #25b9d7;
+    border-color: #25b9d7;
+}
+
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: #25b9d7;
+    border-color: #25b9d7;
+}
+
+.attachment-card {
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: none;
+}
+
+.attachment-card .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem;
+    border-radius: 8px 8px 0 0;
+}
+
+.attachment-card .card-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+    color: #363a41;
+}
+
+.attachment-card .card-title i {
+    margin-right: 0.5rem;
+}
+
+.upload-section {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    border: 1px dashed #ced4da;
+}
+
+.attachment-carousel-wrapper {
+    position: relative;
+    padding: 0 2rem;
+}
+
+.carousel-nav {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.carousel-nav button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.attachment-carousel {
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 1rem 0;
+    gap: 1rem;
+    scrollbar-width: thin;
+}
+
+.attachment-carousel::-webkit-scrollbar {
+    height: 6px;
+}
+
+.attachment-carousel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.attachment-carousel::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.attachment-item {
+    flex: 0 0 auto;
+    width: 180px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+    background-color: white;
+}
+
+.attachment-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+.attachment-preview {
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    overflow: hidden;
+}
+
+.attachment-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pdf-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    padding: 1rem;
+    text-align: center;
+}
+
+.pdf-placeholder i {
+    font-size: 3rem;
+    color: #dc3545;
+    margin-bottom: 0.5rem;
+}
+
+.attachment-info {
+    padding: 0.75rem;
+}
+
+.attachment-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attachment-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-file-label::after {
+    content: "Sfoglia";
+}
+
+.swal-note-html-container-transparent {
+    background-color: transparent !important;
+}

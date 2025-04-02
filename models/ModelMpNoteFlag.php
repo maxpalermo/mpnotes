@@ -29,8 +29,12 @@ class ModelMpNoteFlag extends ObjectModel
     public $allow_update;
     public $allow_attachments;
     public $active;
+    public $always_show;
+    public $show_on_customer_page;
+    public $show_on_order_page;
     public $date_add;
     public $date_upd;
+
     public static $definition = [
         'table' => 'mp_note_flag',
         'primary' => 'id_mp_note_flag',
@@ -42,6 +46,9 @@ class ModelMpNoteFlag extends ObjectModel
             'allow_update' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true, 'default' => 0],
             'allow_attachments' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true, 'default' => 0],
             'active' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true, 'default' => 1],
+            'always_show' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true, 'default' => 0],
+            'show_on_customer_page' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => false, 'default' => 0],
+            'show_on_order_page' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => false, 'default' => 0],
             'date_add' => ['type' => self::TYPE_DATE, 'validate' => 'isDateFormat'],
             'date_upd' => ['type' => self::TYPE_DATE, 'validate' => 'isDateFormat', 'required' => false],
         ],
@@ -307,6 +314,20 @@ class ModelMpNoteFlag extends ObjectModel
         }
 
         return $result;
+    }
+
+    public static function getDefaultFlags()
+    {
+        $flags = self::getFlags();
+        if ($flags) {
+            foreach ($flags as &$flag) {
+                $flag['value'] = 0;
+            }
+        } else {
+            return [];
+        }
+
+        return $flags;
     }
 
     public static function toggleActive($id)

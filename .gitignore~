@@ -66,11 +66,16 @@
 !/img/t/index.php
 !/img/tmp/index.php
 
+# Upload
+/upload/*
+!/upload/.htaccess
+
 /vendor/*
 /docs/phpdoc-sf/
 /composer.lock
 *.hot-update.js
 *.hot-update.json
+
 
 /admin-dev/autoupgrade/*
 !/admin-dev/autoupgrade/index.php
