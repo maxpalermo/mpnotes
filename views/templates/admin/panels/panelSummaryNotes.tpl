@@ -3,9 +3,21 @@
 </div>
 <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function() {
-        console.log("Trigger SummaryNoteLoaded");
+        const url = window.location.href;
+        const isViewPage = url.includes('/view');
 
-        const event = new CustomEvent("SummaryNoteLoaded");
-        document.dispatchEvent(event);
+        console.log("URL:", url, isViewPage);
+
+        if (isViewPage == false) {
+            console.log("isViewPage == false");
+            const summaryNotes = document.getElementById("summaryNotes");
+            if (summaryNotes) {
+                summaryNotes.remove();
+            }
+        } else {
+            console.log("Triggering SummaryNoteLoaded");
+            const event = new CustomEvent("SummaryNoteLoaded");
+            document.dispatchEvent(event);
+        }
     });
 </script>
