@@ -54,12 +54,15 @@ class MpNotes extends Module
     public function install()
     {
         return parent::install()
-            && $this->registerHook('actionAdminControllerSetMedia')
-            && $this->registerHook('displayAdminOrderMain')
-            && $this->registerHook('displayAdminCustomers')
-            && $this->registerHook('displayAdminEndContent')
-            && $this->registerHook('actionOrderGridDefinitionModifier')
-            && $this->registerHook('actionOrderGridQueryBuilderModifier')
+            && $this->registerHook([
+                'actionAdminControllerSetMedia',
+                'actionOrderGridDefinitionModifier',
+                'actionOrderGridQueryBuilderModifier',
+                'displayAdminOrderTop',
+                'displayAdminCustomers',
+                'displayAdminEndContent',
+                'displayAdminOrderMain',
+            ])
             && (new TableGenerator())->createTable(ModelMpNote::$definition)
             && (new TableGenerator())->createTable(ModelMpNoteAttachment::$definition)
             && (new TableGenerator())->createTable(ModelMpNoteFlag::$definition);
@@ -232,7 +235,7 @@ class MpNotes extends Module
         // TODO
     }
 
-    public function hookDisplayAdminEndContent($params)
+    public function hookDisplayAdminOrderTop($params)
     {
         $controller = Tools::strtolower(Tools::getValue('controller'));
         $orderId = (int) Tools::getValue('id_order');
@@ -274,6 +277,11 @@ class MpNotes extends Module
         }
 
         return $script . $html;
+    }
+
+    public function hookDisplayAdminEndContent($params)
+    {
+        // todo
     }
 
     public function getNotes($entity_type, $entity_id)

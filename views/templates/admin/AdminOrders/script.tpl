@@ -26,7 +26,7 @@
         }
 
         //Inserisco summarynotes all'inizio di orderViewPage
-        orderViewPage.insertBefore(summaryNotes, orderViewPage.firstChild);
+        //orderViewPage.insertBefore(summaryNotes, orderViewPage.firstChild);
         const event = new CustomEvent("SummaryNoteLoaded");
         document.dispatchEvent(event);
     });
