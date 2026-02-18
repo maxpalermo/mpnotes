@@ -1,3 +1,4 @@
+<div id="noteControllerURL" style="display: none;" data-url="{$noteControllerUrl}"></div>
 <script type="text/javascript">
     const gravityIcons = {
         info: "info",
@@ -12,6 +13,7 @@
         error: "#dc3545",
         success: "#28a745"
     };
+
     const ajaxController = '{$ajaxController}';
     const id_employee = {$id_employee};
 

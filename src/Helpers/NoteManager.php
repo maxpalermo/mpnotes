@@ -129,10 +129,10 @@ class NoteManager
     {
         $db = \Db::getInstance();
         $query = new \DbQuery();
-        $query->select('*, id_mp_note_flag as id')
-            ->from('mp_note_flag')
+        $query->select('*, id_mpnote_flag as id')
+            ->from('mpnote_flag')
             ->where("type = 'NOTE'")
-            ->orderBy('id_mp_note_flag ASC');
+            ->orderBy('id_mpnote_flag ASC');
 
         if (!empty($showsWhere)) {
             foreach ($showsWhere as $key => $value) {
@@ -147,7 +147,7 @@ class NoteManager
     {
         $query = new \DbQuery();
         $query->select('COUNT(*)')
-            ->from('mp_note')
+            ->from('mpnote')
             ->where("id_note_type = {$id_type}");
 
         if ($always && $id_customer) {
@@ -177,8 +177,8 @@ class NoteManager
     public function getNotes($id_type = 0, $id_order = 0, $id_customer = 0, $always = false)
     {
         $query = new \DbQuery();
-        $query->select('id_mp_note')
-            ->from('mp_note')
+        $query->select('id_mpnote')
+            ->from('mpnote')
             ->where("id_note_type = {$id_type}")
             ->orderBy('date_add DESC');
 
@@ -206,13 +206,13 @@ class NoteManager
         $rows = \Db::getInstance()->executeS($sql);
         if ($rows) {
             foreach ($rows as &$row) {
-                $model = new \ModelMpNote($row['id_mp_note']);
+                $model = new \ModelMpNote($row['id_mpnote']);
                 if (!\Validate::isLoadedObject($model)) {
                     continue;
                 }
                 $fields = $model->getFieldsList();
                 if (!isset($fields['id'])) {
-                    $fields['id'] = $fields['id_mp_note'];
+                    $fields['id'] = $fields['id_mpnote'];
                 }
                 if (!isset($fields['flags'])) {
                     $fields['flags'] = $this->getFlags($fields['flags']);
@@ -233,8 +233,8 @@ class NoteManager
     public function getNotesOld($id_type = 0, $id_order = 0, $id_customer = 0, $always = false)
     {
         $query = new \DbQuery();
-        $query->select('*, id_mp_note as id')
-            ->from('mp_note')
+        $query->select('*, id_mpnote as id')
+            ->from('mpnote')
             ->where("id_note_type = {$id_type}")
             ->orderBy('date_add DESC');
 
@@ -313,7 +313,7 @@ class NoteManager
         $query = new \DbQuery();
         $query->select('count(' . \ModelMpNoteAttachment::$definition['primary'] . ')')
             ->from(\ModelMpNoteAttachment::$definition['table'])
-            ->where('id_mp_note = ' . (int) $id_note);
+            ->where('id_mpnote = ' . (int) $id_note);
 
         return (int) \Db::getInstance()->getValue($query);
     }

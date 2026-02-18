@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <module>
     <name>mpnotes</name>
-    <displayName><![CDATA[MP Notes]]></displayName>
-    <version><![CDATA[2.1.0]]></version>
-    <description><![CDATA[A module to add notes to various PrestaShop entities]]></description>
+    <displayName><![CDATA[MP Gestione note]]></displayName>
+    <version><![CDATA[2.2.36]]></version>
+    <description><![CDATA[Gestisci le note per vari tipi di messaggio]]></description>
     <author><![CDATA[Massimiliano Palermo]]></author>
     <tab><![CDATA[administration]]></tab>
     <is_configurable>1</is_configurable>

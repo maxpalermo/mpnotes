@@ -1,0 +1,91 @@
+<template id="template-dialog-note-form">
+    <dialog id="dialog-note-form" class="card card-info dialog-note-form">
+        <style>
+            dialog#dialog-note-form {
+                    position: fixed;
+                    width: 50vw;
+                    max-width: 90vw;
+                    max-height: 90vh;
+                    height: auto;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    z-index: 5000;
+                    background-color: transparent;
+                    border: none;
+                    border-radius: 10px;
+                    box-shadow: 0 0 16px rgba(0, 0, 0, 0.2);
+                    overflow: visible;
+            }
+            dialog#dialog-note-form .card-header {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 1rem;
+                border-radius: 10px 10px 0 0;
+            }
+            dialog#dialog-note-form .card-body {
+                display: block;
+                background-color: #fff;
+                padding: 1rem;
+                max-height: calc(90vh - 120px);
+                overflow-y: auto;
+            }
+            dialog#dialog-note-form .card-footer {
+                background-color: #fff;
+                border-top: 1px solid #dee2e6;
+                border-radius: 0 0 10px 10px;
+            }   
+            
+            dialog#dialog-note-form::backdrop {
+                background-color: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(3px);
+            }
+
+            #dialog-note-form slot,
+            #dialog-note-form slot * {
+                color: #FCFCFC;
+            }
+        </style>
+        <div class="card-header">
+            <h3>
+                <slot id="icon" name="icon">
+                    <i class="material-icons mr-2">add</i>
+                </slot>
+                <slot id="title" name="title">
+                    Nuova Nota
+                </slot>
+            </h3>
+        </div>
+        <div class="card-body">
+            <slot id="content" name="content">
+                <form id="form-note">
+                    <div class="form-group">
+                        <label for="note-title">Titolo</label>
+                        <input type="text" class="form-control" id="note-title" placeholder="Titolo">
+                    </div>
+                    <div class="form-group">
+                        <label for="note-content">Contenuto</label>
+                        <textarea class="form-control" id="note-content" rows="3"></textarea>
+                    </div>
+                </form>
+            </slot>
+        </div>
+        <div class="card-footer d-flex justify-content-center align-items-center gap-2">
+            <button type="button" class="btn btn-success yes" id="btn-save-dialog">Salva</button>
+            <button type="button" class="btn btn-danger no" id="btn-close-dialog">Annulla</button>
+        </div>
+        <script>
+            document.getElementById('btn-close-dialog').addEventListener('click', function() {
+                const dialog= document.getElementById('dialog-note-form');
+                dialog.close();
+                dialog.remove();
+            });
+            document.getElementById('btn-save-dialog').addEventListener('click', function() {
+                const dialog= document.getElementById('dialog-note-form');
+                dialog.close();
+                dialog.remove();
+            });
+        </script>
+    </dialog>
+</template>

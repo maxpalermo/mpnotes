@@ -1,0 +1,70 @@
+<template id="DialogMpNote-template-form-note">
+    <form id="DialogMpNote-formEditNote" method="post">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <span class="card-title" style="font-size: 1.3rem;">
+                    <span class="material-icons">note</span>
+                    <span>Nota</span>
+                </span>
+            </div>
+            <div class="card-body">
+                <input type="hidden" name="DialogMpNote-Type" id="DialogMpNote-Type" value="">
+                <input type="hidden" name="DialogMpNote-Id" id="DialogMpNote-Id" value="">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <div class="form-group fixed-width-md">
+                        <label for="DialogMpNote-OrderId">Id Ordine</label>
+                        <input type="text" class="form-control text-center" name="DialogMpNote-OrderId" id="DialogMpNote-OrderId" placeholder="Id" value="" readonly>
+                    </div>
+                    <div class="form-group">
+                        <input type="hidden" name="DialogMpNote-CustomerId" id="DialogMpNote-CustomerId" value="">
+                        <label for="DialogMpNote-CustomerName">Cliente</label>
+                        <input type="text" class="form-control text-center" name="DialogMpNote-CustomerName" id="DialogMpNote-CustomerName" placeholder="Cliente" value="" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="DialogMpNote-EmployeeName">Operatore</label>
+                        <input type="hidden" name="DialogMpNote-EmployeeId" id="DialogMpNote-EmployeeId" value="">
+                        <input type="text" class="form-control text-center" name="DialogMpNote-EmployeeName" id="DialogMpNote-EmployeeName" placeholder="Operatore" value="" readonly>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="DialogMpNote-Content">Messaggio</label>
+                    <textarea class="form-control" name="DialogMpNote-Content" id="DialogMpNote-Content" rows="3"></textarea>
+                </div>
+                <div class="d-flex justify-content-end align-items-center gap-2">
+                    <div class="ps-switch-container">
+                        <label>Stampabile</label>
+                        <div class="ps-switch ps-switch-sm ps-togglable-row">
+                            <input type="radio" name="DialogMpNote-Printable" id="DialogMpNote-Printable-0" value="0">
+                            <label for="DialogMpNote-Printable-0"></label>
+                            <input type="radio" name="DialogMpNote-Printable" id="DialogMpNote-Printable-1" value="1">
+                            <label for="DialogMpNote-Printable-1"></label>
+                            <span class="slide-button"></span>
+                        </div>
+                    </div>
+                    <div class="ps-switch-container">
+                        <label>Chat</label>
+                        <div class="ps-switch ps-switch-sm ps-togglable-row">
+                            <input type="radio" name="DialogMpNote-Chat" id="DialogMpNote-Chat-0" value="0">
+                            <label for="DialogMpNote-Chat-0"></label>
+                            <input type="radio" name="DialogMpNote-Chat" id="DialogMpNote-Chat-1" value="1">
+                            <label for="DialogMpNote-Chat-1"></label>
+                            <span class="slide-button"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-center-center gap-2">
+                    <button type="button" class="btn btn-primary" id="DialogMpNote-SubmitForm">
+                        <i class="material-icons mr-2">save</i>
+                        <span>Salva</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="DialogMpNote-CloseForm" onclick="BootstrapTableWrapper.closeModal()">
+                        <i class="material-icons mr-2">close</i>
+                        <span>Chiudi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</template>

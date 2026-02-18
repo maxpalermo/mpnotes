@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -109,7 +110,8 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
         $db = Db::getInstance();
 
         $query = new DbQuery();
-        $query->select('id_customer')
+        $query
+            ->select('id_customer')
             ->select('null as id_employee')
             ->select('note as content')
             ->select('id_customer as id_table')
@@ -122,7 +124,8 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
         }
 
         $query = new DbQuery();
-        $query->select('id_customer, id_employee, message as content, date_add')
+        $query
+            ->select('id_customer, id_employee, message as content, date_add')
             ->from('customer_messages')
             ->orderBy('date_add ASC');
         $result = $db->executeS($query);
@@ -138,7 +141,8 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
     {
         $db = Db::getInstance();
         $query = new DbQuery();
-        $query->select('id_mp_customer_order_notes as id_table')
+        $query
+            ->select('id_mp_customer_order_notes as id_table')
             ->select('id_order')
             ->select('id_employee')
             ->select('content')
@@ -157,7 +161,8 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
     {
         $db = Db::getInstance();
         $query = new DbQuery();
-        $query->select('id_customer_archive as id_table')
+        $query
+            ->select('id_customer_archive as id_table')
             ->select('id_customer')
             ->select('id_order')
             ->select('id_employee')
@@ -197,7 +202,8 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
 
         $db = Db::getInstance();
         $query = new DbQuery();
-        $query->select(ModelMpNoteFlag::$definition['primary'])
+        $query
+            ->select(ModelMpNoteFlag::$definition['primary'])
             ->from(ModelMpNoteFlag::$definition['table'])
             ->where("name = ':name' AND type = ':type'");
 
@@ -329,7 +335,7 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
                 $model->add();
             } catch (\Throwable $th) {
                 $this->errors[] = sprintf(
-                    'Errore durante l\'importazione. Cliente id: %d Errore: %s',
+                    "Errore durante l'importazione. Cliente id: %d Errore: %s",
                     (int) $item['id_customer'],
                     $th->getMessage()
                 );
@@ -371,7 +377,7 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
                 $this->importAttachment($item['id_table'], $id_note, 'order', 0, $item['id_order']);
             } catch (\Throwable $th) {
                 $this->errors[] = sprintf(
-                    'Errore durante l\'importazione. Cliente id: %d Errore: %s',
+                    "Errore durante l'importazione. Cliente id: %d Errore: %s",
                     (int) $item['id_customer'],
                     $th->getMessage()
                 );
@@ -413,7 +419,7 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
                 $this->importAttachment($item['id_table'], $id_note, 'embroidery', $item['id_customer'], $item['id_order']);
             } catch (\Throwable $th) {
                 $this->errors[] = sprintf(
-                    'Errore durante l\'importazione. Cliente id: %d Errore: %s',
+                    "Errore durante l'importazione. Cliente id: %d Errore: %s",
                     (int) $item['id_customer'],
                     $th->getMessage()
                 );
@@ -434,7 +440,8 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
                 $table = 'mp_customer_order_notes_attachments';
                 $field = 'id_mp_customer_order_notes';
                 $query = new DbQuery();
-                $query->select('filename')
+                $query
+                    ->select('filename')
                     ->select('filetitle')
                     ->select('file_ext')
                     ->from($table)
@@ -445,7 +452,8 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
                 $table = 'customer_archive_item';
                 $field = 'id_customer_archive';
                 $query = new DbQuery();
-                $query->select('path as filename')
+                $query
+                    ->select('path as filename')
                     ->select('path as filetitle')
                     ->select('type as file_ext')
                     ->select('date_add')
@@ -462,7 +470,7 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
         $result = $db->executeS($query);
         if ($result) {
             foreach ($result as &$item) {
-                $item['id_mp_note'] = $new_id;
+                $item['id_mpnote'] = $new_id;
                 $item['id_customer'] = $id_customer;
                 $item['id_order'] = $id_order;
                 $item['filename'] = preg_replace('/^\//', '', $item['filename']);
@@ -474,7 +482,7 @@ class MpNotesConfigModuleFrontController extends ModuleFrontController
                     $model->add();
                 } catch (\Throwable $th) {
                     $this->errors[] = sprintf(
-                        'Errore durante l\'importazione. Nota id: %d Errore: %s',
+                        "Errore durante l'importazione. Nota id: %d Errore: %s",
                         (int) $new_id,
                         $th->getMessage()
                     );

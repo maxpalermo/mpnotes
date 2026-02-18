@@ -1,0 +1,14 @@
+{% set colors = ['text-info', 'text-success', 'text-danger'] %}
+{% set legends = ['Note clienti', 'Note ordini', 'Note ricami'] %}
+{% if rows %}
+    {% for row in rows %}
+        {% set color = colors[loop.index0] ?? 'text-info' %}
+        {% set legend = legends[loop.index0] ?? '--' %}
+        <span>
+            <span class="material-icons mr-1 {{ color }}" title="{{ legend }}">{{ row.icon }}</span>
+            <span>{{ row.total_notes }}</span>
+        </span>
+    {% endfor %}
+{% else %}
+    <span>--</span>
+{% endif %}

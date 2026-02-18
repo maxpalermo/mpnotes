@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -50,12 +51,13 @@ class FetchHandler
     public function run()
     {
         if ($this->phpData && isset($this->phpData['action']) && $this->phpData['action']) {
-            //$action = 'processAjax' . \Tools::ucfirst($this->phpData['action']);
+            // $action = 'processAjax' . \Tools::ucfirst($this->phpData['action']);
             $action = $this->phpData['action'];
             if (method_exists($this->controller, $action)) {
                 $result = $this->controller->$action();
 
-                $this->jsonOutput($this->secureResponse($result));
+                $this->secureResponse($result);
+                // $this->jsonOutput($this->secureResponse($result));
             }
         }
     }
@@ -67,7 +69,7 @@ class FetchHandler
 
     protected function secureResponse($response)
     {
-        $ps_protocol = \Configuration::get('PS_SSL_ENABLED' ) ? 'https' : 'http';
+        $ps_protocol = \Configuration::get('PS_SSL_ENABLED') ? 'https' : 'http';
         $ps_domain = \Configuration::get('PS_SHOP_DOMAIN');
         $allowedOrigins = [
             $ps_protocol . '://' . $ps_domain,
@@ -75,12 +77,14 @@ class FetchHandler
 
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-        if (in_array($origin, $allowedOrigins)) {
-            header("Access-Control-Allow-Origin: $origin");
-        } else {
-            header('HTTP/1.1 403 Accesso negato');
-            exit;
-        }
+        /*
+         * if (in_array($origin, $allowedOrigins)) {
+         *     header("Access-Control-Allow-Origin: $origin");
+         * } else {
+         *     header('HTTP/1.1 403 Accesso negato');
+         *     exit;
+         * }
+         */
 
         // Gestione preflight OPTIONS
         if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -99,7 +103,8 @@ class FetchHandler
         header('X-XSS-Protection: 1; mode=block');
         header('X-Frame-Options: DENY');
 
-        return $response;
+        echo json_encode($response);
+        exit;
     }
 
     protected function jsonOutput($data)

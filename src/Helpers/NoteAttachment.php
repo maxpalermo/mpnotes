@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -20,6 +21,10 @@
 
 namespace MpSoft\MpNotes\Helpers;
 
+use MpSoft\MpNotes\Models\ModelMpNote;
+use MpSoft\MpNotes\Models\ModelMpNoteAttachment;
+use MpSoft\MpNotes\Models\ModelMpNoteFlag;
+
 class NoteAttachment
 {
     /**
@@ -32,7 +37,7 @@ class NoteAttachment
      */
     public static function renderNoteAttachmentPanel($id_note, $viewMode = false)
     {
-        $model = new \ModelMpNote($id_note);
+        $model = new ModelMpNote($id_note);
         if (!\Validate::isLoadedObject($model)) {
             return ['success' => false, 'html' => self::renderAlertEmptyPanel()];
         }
@@ -53,12 +58,12 @@ class NoteAttachment
     /**
      * Render the attachment panel content
      *
-     * @param \ModelMpNote $model Note model
+     * @param ModelMpNote $model Note model
      * @param bool $viewMode If true, the panel will be in view mode (no edit controls)
      *
      * @return string HTML content
      */
-    public static function renderNoteAttachmentPanelContent(\ModelMpNote $model, $viewMode = false)
+    public static function renderNoteAttachmentPanelContent(ModelMpNote $model, $viewMode = false)
     {
         $module = \Module::getInstanceByName('mpnotes');
         $template = new CreateTemplate($module->name);
@@ -90,7 +95,7 @@ class NoteAttachment
      */
     public static function getAttachmentsForNote($id_note)
     {
-        return \ModelMpNoteAttachment::getAttachments($id_note, 0);
+        return ModelMpNoteAttachment::getAttachments($id_note, 0);
     }
 
     /**
@@ -100,9 +105,17 @@ class NoteAttachment
      */
     public static function getAttachmentUrl()
     {
-        $module = \Module::getInstanceByName('mpnotes');
+        return _PS_BASE_URL_ . __PS_BASE_URI__ . 'img/mpnotes/';
+    }
 
-        return _PS_BASE_URL_ . __PS_BASE_URI__ . 'modules/' . $module->name . '/uploads/';
+    /**
+     * Get the base URL for attachments
+     *
+     * @return string Attachment URL
+     */
+    public static function getAttachmentPath()
+    {
+        return _PS_IMG_DIR_ . 'mpnotes/';
     }
 
     /**
@@ -123,7 +136,7 @@ class NoteAttachment
             return ['success' => false, 'message' => 'Nessun file caricato'];
         }
 
-        $note = new \ModelMpNote($id_note);
+        $note = new ModelMpNote($id_note);
         if (!\Validate::isLoadedObject($note)) {
             return ['success' => false, 'message' => 'Nota non trovata'];
         }
@@ -133,7 +146,7 @@ class NoteAttachment
         }
 
         // Create upload directory if it doesn't exist
-        $uploadDir = self::getUploadDirectory();
+        $uploadDir = self::getAttachmentPath();
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
@@ -174,11 +187,11 @@ class NoteAttachment
             // Move uploaded file
             if (move_uploaded_file($fileTmpName, $targetFilePath)) {
                 // Create attachment record
-                $attachment = new \ModelMpNoteAttachment();
-                $attachment->id_mp_note = $id_note;
+                $attachment = new ModelMpNoteAttachment();
+                $attachment->id_mpnote = $id_note;
                 $attachment->id_customer = $note->id_customer;
                 $attachment->id_order = $note->id_order;
-                $attachment->id_mp_note_flag = 0; // Default flag
+                $attachment->id_mpnote_flag = 0;  // Default flag
                 $attachment->filename = $newFileName;
                 $attachment->filetitle = $fileName;
                 $attachment->file_ext = strtolower($fileExt);
@@ -221,19 +234,19 @@ class NoteAttachment
             return ['success' => false, 'message' => 'ID allegato non valido'];
         }
 
-        $attachment = new \ModelMpNoteAttachment($id_attachment);
+        $attachment = new ModelMpNoteAttachment($id_attachment);
         if (!\Validate::isLoadedObject($attachment)) {
             return ['success' => false, 'message' => 'Allegato non trovato'];
         }
 
         // Check if user has permission to delete this attachment
-        $note = new \ModelMpNote($attachment->id_mp_note);
+        $note = new ModelMpNote($attachment->id_mpnote);
         if (!\Validate::isLoadedObject($note) || !$note->allowUpdate()) {
             return ['success' => false, 'message' => 'Non hai i permessi per eliminare questo allegato'];
         }
 
         // Delete file
-        $filePath = self::getUploadDirectory() . $attachment->filename;
+        $filePath = self::getAttachmentPath() . $attachment->filename;
         if (file_exists($filePath)) {
             unlink($filePath);
         }
@@ -243,19 +256,7 @@ class NoteAttachment
             return ['success' => true, 'message' => 'Allegato eliminato con successo'];
         }
 
-        return ['success' => false, 'message' => 'Errore durante l\'eliminazione dell\'allegato'];
-    }
-
-    /**
-     * Get upload directory path
-     *
-     * @return string Upload directory path
-     */
-    private static function getUploadDirectory()
-    {
-        $module = \Module::getInstanceByName('mpnotes');
-
-        return _PS_MODULE_DIR_ . $module->name . '/uploads/';
+        return ['success' => false, 'message' => "Errore durante l'eliminazione dell'allegato"];
     }
 
     /**
@@ -281,7 +282,7 @@ class NoteAttachment
             case UPLOAD_ERR_CANT_WRITE:
                 return 'Impossibile scrivere il file su disco';
             case UPLOAD_ERR_EXTENSION:
-                return 'Caricamento del file interrotto da un\'estensione PHP';
+                return "Caricamento del file interrotto da un'estensione PHP";
             default:
                 return 'Errore di caricamento sconosciuto';
         }

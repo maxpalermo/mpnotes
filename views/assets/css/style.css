@@ -1,0 +1,20 @@
+#bsTblNotes tbody tr:hover {
+    background-color: #faf5c2 !important;
+    color: #303030 !important;
+}
+
+.gap-1 {
+    gap: 0.5rem;
+}
+
+.gap-2 {
+    gap: 1rem;
+}
+
+.mr-1 {
+    margin-right: 0.5rem;
+}
+
+.mr-2 {
+    margin-right: 1rem;
+}

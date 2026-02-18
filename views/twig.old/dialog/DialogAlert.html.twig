@@ -1,0 +1,29 @@
+<template id="template-dialog-alert">
+    <dialog id="dialog-alert" class="card alert">
+        <div class="card-header">
+            <h3>
+                <slot name="icon"></slot>
+                <slot name="title"></slot>
+            </h3>
+        </div>
+        <div class="card-body">
+            <p>
+                <slot name="message"></slot>
+            </p>
+        </div>
+        <div class="card-footer d-flex justify-content-center align-items-center gap-2">
+            <button type="button" class="btn btn-primary yes">
+                <i class="material-icons mr-2">check</i>
+                <span>Sì</span>
+            </button>
+            <button type="button" class="btn btn-secondary no">
+                <i class="material-icons mr-2">close</i>
+                <span>No</span>
+            </button>
+            <button type="button" class="btn btn-warning cancel">
+                <i class="material-icons mr-2">exit_to_app</i>
+                <span>Chiudi</span>
+            </button>
+        </div>
+    </dialog>
+</template>

@@ -1,0 +1,22 @@
+{% if type == 'customer' %}
+    <button class="btn btn-default mb-2 btn-new-note" type="button" data-type="customer">
+        <i class="material-icons">save</i>
+        <span>Nuova Nota</span>
+    </button>
+    
+    {% include "table/BsTableNotes.html.twig" with {'id_type': 'customer'} %}
+{% elseif type == 'order' %}
+    <button class="btn btn-default mb-2 btn-new-note" type="button" data-type="order">
+        <i class="material-icons">save</i>
+        <span>Nuova Nota</span>
+    </button>
+
+    {% include "table/BsTableNotes.html.twig" with {'id_type': 'order'} %}
+{% elseif type == 'embroidery' %}
+    <button class="btn btn-default mb-2 btn-new-note" type="button" data-type="embroidery">
+        <i class="material-icons">save</i>
+        <span>Nuova Nota</span>
+    </button>
+
+    {% include "table/BsTableNotes.html.twig" with {'id_type': 'embroidery'} %}
+{% endif %}

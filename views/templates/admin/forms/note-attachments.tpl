@@ -1,19 +1,20 @@
-<div class="card attachment-card" data-id_note="{$note->id}">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h3 class="card-title mb-0">
-            <i class="material-icons mr-1">attach_file</i>
-            {if $viewMode}Allegati{else}Gestione Allegati{/if}
-        </h3>
-        {if !$viewMode}
-            <div class="header-actions">
-                <button type="button" class="btn btn-outline-primary btn-sm" id="btnToggleUpload">
-                    <i class="material-icons">add</i> Aggiungi
+<div id="attachmentsCarousel" class="card-body" data-id_note="{$note->id}">
+    <div class="card-body">
+        <!--Toolbar pusanti azione-->
+        <div class="d-flex justify-content-end">
+            <div class="btn-group" role="group">
+                {if !$viewMode}
+                    <button type="button" class="btn btn-primary" id="btn-new-attachment">
+                        <i class="material-icons">add</i> Aggiungi
+                    </button>
+                {/if}
+                
+                <button type="button" class="btn btn-success" id="btnSaveAttachmentForm">
+                    <i class="material-icons align-middle mr-1">save</i> Salva
                 </button>
             </div>
-        {/if}
-    </div>
+        </div>
 
-    <div class="card-body">
         <input type="hidden" name="id_note" id="id_note" value="{$note->id}">
         <!-- Upload Section (initially hidden in edit mode) -->
         {if !$viewMode}
@@ -54,10 +55,10 @@
                     <!-- Carousel Items -->
                     <div class="attachment-carousel">
                         {foreach from=$attachments item=attachment}
-                            <div class="attachment-item" data-id="{$attachment.id_mp_note_attachment}">
+                            <div class="attachment-item" data-id="{$attachment.id_mpnote_attachment}">
                                 <div class="attachment-preview">
                                     {if $attachment.file_ext|in_array:['jpg', 'jpeg', 'png', 'gif', 'webp']}
-                                        <img src="{$attachment_url}{$attachment.filename}" alt="{$attachment.filetitle}" class="img-fluid">
+                                        <img src="{$attachment_url}{$attachment.filename}" alt="{$attachment.filetitle}" class="img-fluid attachment-preview-img">
                                     {else}
                                         <div class="pdf-placeholder">
                                             <i class="material-icons">picture_as_pdf</i>
@@ -69,7 +70,7 @@
                                     <div class="attachment-title">{$attachment.filetitle}</div>
                                     {if !$viewMode}
                                         <div class="attachment-actions">
-                                            <button type="button" class="btn btn-sm btn-icon btn-outline-danger btn-delete-attachment" data-id="{$attachment.id_mp_note_attachment}">
+                                            <button type="button" class="btn btn-sm btn-icon btn-outline-danger btn-delete-attachment" data-id="{$attachment.id_mpnote_attachment}">
                                                 <i class="material-icons">delete</i>
                                             </button>
                                         </div>
@@ -85,16 +86,6 @@
                     Nessun allegato disponibile
                 </div>
             {/if}
-        </div>
-    </div>
-    <div class="card-footer">
-        <div class="d-flex justify-content-between">
-            <button type="button" class="btn btn-outline-secondary" id="btnCancelAttachmentForm">
-                <i class="material-icons align-middle mr-1">close</i> Annulla
-            </button>
-            <button type="button" class="btn btn-primary" id="btnSaveAttachmentForm">
-                <i class="material-icons align-middle mr-1">save</i> Salva
-            </button>
         </div>
     </div>
 </div>

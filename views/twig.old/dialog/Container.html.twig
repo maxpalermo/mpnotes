@@ -1,0 +1,15 @@
+<template id="template-dialog-container">
+    <dialog id="dialog-container" class="card card-info dialog-container">
+        <div class="card-header">
+            <h5>
+                <slot name="title"></slot>
+            </h5>
+        </div>
+        <div class="card-body">
+            <slot name="content"></slot>
+        </div>
+        <div class="card-footer d-flex justify-content-center align-items-center">
+            <button type="button" class="btn btn-primary" id="btn-close-dialog">Chiudi</button>
+        </div>
+    </dialog>
+</template>

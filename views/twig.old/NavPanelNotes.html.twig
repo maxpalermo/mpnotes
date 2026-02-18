@@ -1,0 +1,137 @@
+<!--
+Do the following override modules\{any-module}\views\PrestaShop\Admin\Sell\Order\Order\Blocks\View\sources.html.twig, make this file blank, then clear cache and that's it, the block disappears.
+-->
+
+<link href="{{ asset('css/style.css') }}" rel="stylesheet">
+<link href="{{ asset('js/bs-table/bootstrap-table.min.css') }}" rel="stylesheet">
+
+<script src="{{ asset('js/ToastClass.js') }}"></script>
+<script src="{{ asset('js/ConfirmClass.js') }}"></script>
+<script src="{{ asset('js/bs-table/bootstrap-table.min.js') }}"></script>
+<script src="{{ asset('js/bs-table/locale/bootstrap-table-it-IT.min.js') }}"></script>
+<script src="{{ asset('js/BootstrapTableWrapper.js') }}"></script>
+
+<script src="{{ asset('js/components/file.js') }}"></script>
+<script src="{{ asset('js/components/formNote.js') }}"></script>
+
+
+<div class="note-container mt-2 mb-2">
+    <mpnote-dialog id="mpnote-dialog" endpoint="{{ mpNotes.adminControllerUrl }}"></mpnote-dialog>
+    <nav>
+        <div class="nav nav-tabs" id="mpnotes-nav-tabs" role="tablist">
+            <button class="nav-link active" id="mpnotes-nav-tabs-closed" data-toggle="tab" data-target="#mpnotes-nav-tabs-closed" type="button" role="tab" aria-controls="mpnotes-nav-tabs-closed" aria-selected="true">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <div class="d-flex justify-content-start align-items-center gap-2">
+                        <i class="material-icons">chat</i>
+                        <span>MESSAGGI</span>
+                    </div>
+                </div>
+            </button>
+            {% if mpNotes.navTabs.customer.enabled %}
+            <button class="nav-link" id="mpnotes-nav-tabs-btn-customer" data-toggle="tab" data-target="#mpnotes-nav-tabs-customer" type="button" role="tab" aria-controls="mpnotes-nav-tabs-customer" aria-selected="true">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <div class="d-flex justify-content-start align-items-center gap-2 text-info">
+                        <i class="material-icons">person</i>
+                        <span>Clienti</span>
+                    </div>
+                    <span class="badge badge-pill {% if mpNotes.noteCountCustomer == 0 %}badge-danger{% else %}badge-success{% endif %}">{{ mpNotes.noteCountCustomer }}</span>
+                </div>
+            </button>
+            {% endif %}
+            {% if mpNotes.navTabs.order.enabled %}
+            <button class="nav-link" id="mpnotes-nav-tabs-btn-order" data-toggle="tab" data-target="#mpnotes-nav-tabs-order" type="button" role="tab" aria-controls="mpnotes-nav-tabs-order" aria-selected="false">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <div class="d-flex justify-content-start align-items-center gap-2 text-info">
+                        <i class="material-icons">shopping_cart</i>
+                        <span>Ordini</span>
+                    </div>
+                    <span class="badge badge-pill {% if mpNotes.noteCountOrder == 0 %}badge-danger{% else %}badge-success{% endif %}">{{ mpNotes.noteCountOrder }}</span>
+                </div>
+            </button>
+            {% endif %}
+            {% if mpNotes.navTabs.embroidery.enabled %}
+            <button class="nav-link" id="mpnotes-nav-tabs-btn-embroidery" data-toggle="tab" data-target="#mpnotes-nav-tabs-embroidery" type="button" role="tab" aria-controls="mpnotes-nav-tabs-embroidery" aria-selected="false">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <div class="d-flex justify-content-start align-items-center gap-2 text-info">
+                        <i class="material-icons">timeline</i>
+                        <span>Ricami</span>
+                    </div>
+                    <span class="badge badge-pill {% if mpNotes.noteCountEmbroidery == 0 %}badge-danger{% else %}badge-success{% endif %}">{{ mpNotes.noteCountEmbroidery }}</span>
+                </div>
+            </button>
+            {% endif %}
+        </div>
+    </nav>
+    <div class="tab-content" id="mpnotes-nav-tabsContent">
+        <div class="tab-pane fade show active" id="mpnotes-nav-tabs-closed" role="tabpanel" aria-labelledby="mpnotes-nav-tabs-closed">
+            {% include "form/NavPanelNotesContent.html.twig" with {'type': 'closed'} %}
+        </div>
+        <div class="tab-pane fade" id="mpnotes-nav-tabs-customer" role="tabpanel" aria-labelledby="mpnotes-nav-tabs-btn-customer">
+            {% include "form/NavPanelNotesContent.html.twig" with {'type': 'customer'} %}
+        </div>
+        <div class="tab-pane fade" id="mpnotes-nav-tabs-order" role="tabpanel" aria-labelledby="mpnotes-nav-tabs-btn-order">
+            {% include "form/NavPanelNotesContent.html.twig" with {'type': 'order'} %}
+        </div>
+        <div class="tab-pane fade" id="mpnotes-nav-tabs-embroidery" role="tabpanel" aria-labelledby="mpnotes-nav-tabs-btn-embroidery">
+            {% include "form/NavPanelNotesContent.html.twig" with {'type': 'embroidery'} %}
+        </div>
+    </div>
+
+    {% include "form/EditForm.html.twig" %}
+
+    <script src="{{ asset('js/class/MpNotesClass.js') }}"></script>
+    <script type="text/javascript">
+        const MODULE_MPNOTES = {{ mpNotes | json_encode | raw }};
+        const mpNotes = new MpNotes(MODULE_MPNOTES);
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const navTabsBtn = document.getElementById("mpnotes-nav-tabs").querySelectorAll(".nav-link");
+            const navTabsContent = document.getElementById("mpnotes-nav-tabsContent").querySelectorAll(".tab-pane");
+            const adminControllerUrl = MODULE_MPNOTES.adminControllerUrl;
+            const editOrderLink = MODULE_MPNOTES.orderLinkUrl;
+            const orderId = MODULE_MPNOTES.orderId;
+            const customerId = MODULE_MPNOTES.customerId;
+            
+            MODULE_MPNOTES.toastMessage = new ToastClass("mpnotes-toast");
+            MODULE_MPNOTES.confirmMessage = new ConfirmClass("mpnotes-confirm");
+            MODULE_MPNOTES.bsTableWrapperCustomer = new BootstrapTableWrapper(adminControllerUrl, "table-note-customer", orderId, customerId, "customer", "id_mpnote", null);
+            MODULE_MPNOTES.bsTableWrapperOrder = new BootstrapTableWrapper(adminControllerUrl, "table-note-order", orderId, customerId, "order", "id_mpnote", null);
+            MODULE_MPNOTES.bsTableWrapperEmbroidery = new BootstrapTableWrapper(adminControllerUrl,"table-note-embroidery", orderId, customerId,"embroidery", "id_mpnote", null);
+
+            window.MODULE_MPNOTES = MODULE_MPNOTES;
+
+            if (navTabsBtn && navTabsContent) {
+                navTabsBtn.forEach((btn) => {
+                    btn.addEventListener("click", (event) => {
+                        const btn = event.target;
+                        //Rimuove active dai bottoni e ai content
+                        navTabsBtn.forEach((btn) => {
+                            btn.classList.remove("active");
+                        });
+                        navTabsContent.forEach((content) => {
+                            content.classList.remove("show");
+                            content.classList.remove("active");
+                        });
+                        //Aggiunge active al bottone e al content
+                        btn.classList.add("active");
+                        const targetDivId = btn.getAttribute("data-target");
+                        const targetDiv = document.querySelector(targetDivId);
+                        if (targetDiv) {
+                            targetDiv.classList.add("show");
+                            targetDiv.classList.add("active");
+                        }
+                        //Fa il bind ai bottoni btn-new-note
+                        mpNotes.bindBtnNewNote();
+                        //Fa il bind ai bottoni btn-view-note
+                        mpNotes.bindBtnViewNote();
+                        //Fa il bind ai bottoni btn-add-attachment
+                        mpNotes.bindBtnAddAttachment();
+                        // fa il bind ai bottoni btn-attachment
+                        mpNotes.bindBtnAttachment();
+                    });
+                });
+            }
+        });
+    </script>
+</div>
+

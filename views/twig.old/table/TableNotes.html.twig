@@ -1,0 +1,57 @@
+<table class="table table-condensed table-striped table-bordered" id="noteTable_{{ id_type }}">
+    <tbody>
+        {% if notes|length > 0 %}
+            {% for note in notes %}
+                <tr class="pointer tr-note" data-id="{{ note.id }}" data-type="{{ id_type }}">
+                    <td style="width: 48px; text-align: center;" data-cell="gravity">
+                        <span class="material-icons text-{{ note.gravity }}">{{ note.gravity_icon }}</span>
+                    </td>
+                    <td style="width: 3rem;" data-cell="flags">
+                        <div class="d-flex align-items-center justify-content-start">
+                            {% if note.flags %}
+                                {% if note.flags.printable %}
+                                    <span class="material-icons" style="color: var(--info)">print</span>
+                                {% endif %}
+                                {% if note.flags.chat %}
+                                    <span class="material-icons" style="color: var(--warning)">chat</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td style="width: 6rem;" data-cell="id_order">{{ note.id_order }}</td>
+                    <td style="width: 6rem;" data-cell="date_add">{{ note.date_add|date("Y-m-d H:i:s") }}</td>
+                    <td data-cell="content">{{ note.content }}</td>
+                    <td style="width: 4rem; text-align: center;" class="no-row-click" data-cell="attachments">
+                        <div class="d-flex align-items-center justify-content-center">
+                            {% if note.attachments > 0 or note.allow_attachments %}
+                                <button type="button" class="btn btn-default btn-sm btn-attachment" data-id_note="{{ note.id }}" data-id_type="{{ id_type }}" style="max-width: 3rem; min-width: 3rem;">
+                                    {% if note.attachments > 0 %}
+                                        <span class="badge badge-success">{{ note.attachments }}</span>
+                                    {% else %}
+                                        <span class="badge badge-warning"><span class="material-icons" style="font-size: 0.7rem;">attachment</span></span>
+                                    {% endif %}
+                                </button>
+                            {% elseif not note.allow_attachments %}
+                                <span class="icon-no-links" data-id_note="{{ note.id }}" title="Allegati non trovati"></span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td style="width: 2rem;" data-cell="view">
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                            <button type="button" class="btn btn-info btn-sm btn-view-note" data-id="{{ note.id }}" data-type="{{ id_type }}" title="Visualizza nota">
+                                <span class="material-icons">preview</span>
+                            </button>
+                            <button type="button" class="btn btn-warning btn-sm btn-add-attachment" data-id="{{ note.id }}" data-customer="{{ note.id_customer }}" data-order="{{ note.id_order }}" data-type="{{ id_type }}" title="Aggiungi allegato">
+                                <span class="material-icons">attachment</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="5" class="text-center">Nessuna nota trovata</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>

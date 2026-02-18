@@ -1,0 +1,211 @@
+<link href="{{ asset('css/style.css') }}" rel="stylesheet">
+<link href="{{ asset('js/bs-table/bootstrap-table.min.css') }}" rel="stylesheet">
+
+<script src="{{ asset('js/ToastClass.js') }}"></script>
+<script src="{{ asset('js/ConfirmClass.js') }}"></script>
+<script src="{{ asset('js/LoadingMessages.js') }}"></script>
+<script src="{{ asset('js/bs-table/bootstrap-table.min.js') }}"></script>
+<script src="{{ asset('js/bs-table/locale/bootstrap-table-it-IT.min.js') }}"></script>
+<script src="{{ asset('js/bs-table/bootstrap-fix-icons.js') }}"></script>
+<script src="{{ asset('js/DateFormatter.js') }}"></script>
+<script src="{{ asset('js/admin/adminBsTableWrapper.js') }}"></script>
+
+<div class="panel">
+    <div class="panel-heading">
+        <i class="icon icon-cogs"></i>
+        <span>MP Gestione note</span>
+    </div>
+    <div class="panel-body">
+        <div class="toolbar">
+            <button class="btn btn-primary" id="import-v16">Importa note da v1.6</button>
+        </div>
+        <div class="table-container">
+            <table id="table-notes"></table>
+        </div>
+    </div>
+    <div class="panel-footer">
+    
+    </div>
+</div>
+
+<script type="text/javascript">
+    const limit = 1000;
+    const adminControllerUrl = "{{ adminControllerUrl | raw }}";
+
+    async function getTotalRows(tableName)
+    {
+        const formData = new FormData();
+        formData.append("ajax", "1");
+        formData.append("action", "getTotalRows");
+        formData.append("tableName", tableName);
+
+        const request = await fetch(adminControllerUrl,{
+            method: "POST",
+            body: formData
+        });
+
+        const data = await request.json();
+        
+        return data.totalRows;
+    }
+
+    async function doImport(tableName, offset, limit, attachments = 0, loader = null)
+    {
+        let step = 1;
+        let totalRows = 0;
+        let tableNameCount = tableName;
+
+        if (attachments) {
+            switch(tableName) {
+                case "mp_customer_order_notes":
+                    tableNameCount = tableName +"_attachments";
+                    break;
+                case "customer_archive":
+                    tableNameCount = tableName +"_item";
+                    break;
+            }
+        }
+
+        totalRows = await getTotalRows(tableNameCount);
+
+        // Importo la tabella customer_messages
+            while(true) {
+            const formData = new FormData();
+            formData.append("ajax", "1");
+            formData.append("action", "importV16");
+            formData.append("table", tableName);
+            formData.append("offset", offset);
+            formData.append("limit", limit);
+            formData.append("attachments", attachments);
+
+            const result = await fetch(adminControllerUrl, {
+                method: "POST",
+                body: formData
+            });
+            const data = await result.json();
+            const timer = new Date().toLocaleString('it-IT', { dateStyle: 'full', timeStyle: 'medium' });
+
+            if (data.success == 1) {
+                offset = data.offset;
+                step++;
+                if (data.end_of_data == true) {
+                    loader.updateContent(
+                        `
+                            <h4>Tabella: <code>${tableName}${attachments==1 ? " (allegati)" : ""}</code></h4>
+                            <h4>Passo ${step-1}</h4>
+                            <p>Note importate: ${data.offset}</p>
+                            <p>Note totali: ${totalRows}</p>
+                            <p>Operazione eseguita con successo</p>
+                        `,
+                    );
+                    loader.updateType("success");
+                    break;
+                } else {
+                    loader.updateContent(
+                        `
+                            <h4>Tabella: <code>${tableName}</code></h4>
+                            <h4>Passo ${step-1}</h4>
+                            <p>Note importate: ${data.offset}</p>
+                            <p>Note totali: ${totalRows}</p>
+                            <p>Attendere la fine delle operazioni</p>
+                        `,
+                    );
+                }
+            } else if (data.success == 0) {
+                loader.update("Operazione fallita", "Importazione non riuscita", "error", "<span class='icon icon-exclamation-triangle'></span>");
+                loader.updateType("error");
+                break;
+            }
+        }
+
+        //Aspetto un secondo per permettere al browser di aggiornare la tabella
+        setTimeout(() => {
+            adminBsTableWrapper.refresh();
+        }, 1000);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const adminBsTableWrapper = new AdminBsTableWrapper(
+            "{{ adminControllerUrl }}",
+            "table-notes",
+            "id_mpnotes"
+        );
+        const importV16 = document.getElementById("import-v16");
+        const confirmClass = new ConfirmClass("adminMpNotesConfirm");
+        const toastClass = new ToastClass("adminMpNotesToast")
+        const loader = new LoadingMessageWrapper();
+
+        window.adminBsTableWrapper = adminBsTableWrapper;
+
+        importV16.addEventListener("click", async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+    
+            let offset = 0;
+            let step = 1;
+
+            const confirm = await confirmClass.confirmYesNo(
+                "Richiesta",
+                `
+                    <p>Sei sicuro di voler importare le note da v1.6?</p>
+                    <p style="color: #A03030;">Questa operazione non può essere annullata e cancellerà tutte le note esistenti.</p>
+                `
+            );
+
+            if (confirm=="no") {
+                toastClass.showToastWarning("Operazione annullata", "Operazione annullata dall'utente");
+                return;
+            }
+
+            loader.showInfo(
+                "Operazione in corso",
+                "Attendere prego...",
+            );
+
+            loader.updateContent(
+                `
+                    <h3>Eliminazione contenuto tabella</h3>
+
+                    <p>Attendere la fine delle operazioni</p>
+                `,
+            );
+
+            const request = new FormData();
+            request.append("ajax", 1);
+            request.append("action", "truncateTables");
+
+            await fetch(adminControllerUrl, {
+                method: "POST",
+                body: request
+            });
+
+            loader.updateContent(
+                `
+                    <h3>Inizio importazione</h3>
+                    <p>Attendere la fine delle operazioni</p>
+                `,
+            );
+
+            await doImport("customer_messages", offset, limit, 0, loader);
+            
+            await doImport("mp_customer_order_notes", offset, limit, 0, loader);
+            await doImport("mp_customer_order_notes", offset, limit, 1, loader);
+            
+            await doImport("customer_archive", offset, limit, 0, loader);
+            await doImport("customer_archive", offset, limit, 1, loader);
+
+            loader.updateContent(
+                `
+                    <h4>OPERAZIONE ESEGUITA CON SUCCESSO</h4>
+                    <p>Operazione completata con successo</p>
+                `,
+            );
+
+            loader.updateType("success");
+
+            setTimeout(() => {
+                loader.hide();
+            }, 5000);
+        });
+    });
+</script>

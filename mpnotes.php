@@ -25,67 +25,178 @@ if (!defined('_PS_VERSION_')) {
 }
 
 require_once dirname(__FILE__) . '/vendor/autoload.php';
-require_once dirname(__FILE__) . '/models/autoload.php';
 
+use MpSoft\MpNotes\Helpers\GetTwigEnvironment;
 use MpSoft\MpNotes\Helpers\NoteManager;
 use MpSoft\MpNotes\Helpers\TableGenerator;
+use MpSoft\MpNotes\Models\ModelMpNote;
+use MpSoft\MpNotes\Models\ModelMpNoteAttachment;
+use MpSoft\MpNotes\Models\ModelMpNoteFlag;
+use MpSoft\MpNotes\Traits\ModuleTraits;
+use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
+use PrestaShop\PrestaShop\Core\Module\WidgetInterface;
 
-class MpNotes extends Module
+class MpNotes extends Module implements WidgetInterface
 {
+    use ModuleTraits;
+
     public function __construct()
     {
         $this->name = 'mpnotes';
         $this->tab = 'administration';
-        $this->version = '2.1.0';
+        $this->version = '2.2.36';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
         $this->ps_versions_compliancy = [
-            'min' => '8.0.0',
-            'max' => _PS_VERSION_,
+            'min' => '8.1.0',
+            'max' => '8.99.99',
         ];
 
         parent::__construct();
 
-        $this->displayName = $this->trans('MP Notes', [], 'Modules.Mpnotes.Admin');
-        $this->description = $this->trans('A module to add notes to various PrestaShop entities', [], 'Modules.Mpnotes.Admin');
+        $this->displayName = $this->trans('MP Gestione note', [], 'Modules.Mpnotes.Admin');
+        $this->description = $this->trans('Gestisci le note per vari tipi di messaggio', [], 'Modules.Mpnotes.Admin');
     }
 
     public function install()
     {
-        return parent::install()
-            && $this->registerHook([
+        return parent::install() &&
+            $this->registerHook([
                 'actionAdminControllerSetMedia',
                 'actionOrderGridDefinitionModifier',
                 'actionOrderGridQueryBuilderModifier',
+                'actionOrderGridDataModifier',
                 'displayAdminOrderTop',
                 'displayAdminCustomers',
-                'displayAdminEndContent',
-                'displayAdminOrderMain',
-            ])
-            && (new TableGenerator())->createTable(ModelMpNote::$definition)
-            && (new TableGenerator())->createTable(ModelMpNoteAttachment::$definition)
-            && (new TableGenerator())->createTable(ModelMpNoteFlag::$definition);
+            ]) &&
+            ModelMpNote::install() &&
+            ModelMpNoteAttachment::install() &&
+            $this->installTab();
+    }
+
+    protected function installTab()
+    {
+        $tabRepository = SymfonyContainer::getInstance()->get('prestashop.core.admin.tab.repository');
+        $id_ParentCustomer = $tabRepository->findOneIdByClassName('AdminParentCustomer');
+
+        $tab = new Tab();
+        $tab->class_name = 'AdminMpNotes';
+        $tab->module = $this->name;
+        $tab->id_parent = (int) $id_ParentCustomer;
+        $tab->icon = 'icon-note';
+        foreach (Language::getLanguages() as $language) {
+            $tab->name[$language['id_lang']] = $this->l('MP Note clienti');
+        }
+
+        return $tab->add();
     }
 
     public function uninstall()
     {
-        return parent::uninstall();
+        return parent::uninstall() &&
+            $this->uninstallTab();
+    }
+
+    protected function uninstallTab()
+    {
+        $tabRepository = SymfonyContainer::getInstance()->get('prestashop.core.admin.tab.repository');
+        $id_tab = $tabRepository->findOneIdByClassName('AdminMpNotes');
+        $tab = new Tab($id_tab);
+
+        $tab->delete();
+
+        return true;
     }
 
     public function renderWidget($hookName, array $configuration)
     {
         switch ($hookName) {
             case 'displayAdminOrderMain':
+                break;
             case 'displayAdminOrderSide':
+                break;
             case 'displayAdminOrderTop':
+                return $this->displayAdminOrderTop($configuration);
             case 'displayBackOfficeFooter':
                 break;
-            default:
-                return '';
+            case 'displayAdminEndContent':
+                break;
         }
 
         return '';
+    }
+
+    protected function displayAdminOrderTop($configuration)
+    {
+        $customerId = 0;
+        $customerName = '';
+
+        if (isset($configuration['id_order'])) {
+            $id_order = (int) $configuration['id_order'];
+        } else {
+            $id_order = (int) Tools::getValue('id_order', 0);
+        }
+        $id_customer = 0;
+
+        if ($id_order) {
+            $order = new Order($id_order);
+            $customer = new Customer($order->id_customer);
+
+            $customer = [
+                'id' => (int) $order->id_customer,
+                'name' => Tools::ucwords($customer->firstname . ' ' . $customer->lastname),
+            ];
+        }
+
+        $id_employee = (int) $this->context->employee->id;
+        $employeeName = Tools::ucwords($this->context->employee->firstname . ' ' . $this->context->employee->lastname);
+
+        $params = [
+            'endpoint' => $this->context->link->getAdminLink('AdminMpNotes'),
+            'orderLinkUrl' => $this->context->link->getAdminLink('AdminOrders', true, [], ['id_order' => '0', 'vieworder' => 1]),
+            'orderId' => $order->id,
+            'customer' => $customer,
+            'employee' => [
+                'id' => $id_employee,
+                'name' => $employeeName
+            ],
+            'navTabs' => [
+                'customer' => [
+                    'id' => ModelMpNote::TYPE_CUSTOMER,
+                    'type' => 'customer',
+                    'enabled' => true,
+                    'notes' => ModelMpNote::getNotesCountByTypeAndIdOrder($id_order, 'customer'),
+                    'label' => 'Clienti',
+                    'icon' => 'person',
+                    'color' => 'var(--info)'
+                ],
+                'order' => [
+                    'id' => ModelMpNote::TYPE_ORDER,
+                    'type' => 'order',
+                    'enabled' => true,
+                    'notes' => ModelMpNote::getNotesCountByTypeAndIdOrder($id_order, 'order'),
+                    'label' => 'Ordini',
+                    'icon' => 'shopping_cart',
+                    'color' => 'var(--info)'
+                ],
+                'embroidery' => [
+                    'id' => ModelMpNote::TYPE_EMBROIDERY,
+                    'type' => 'embroidery',
+                    'enabled' => true,
+                    'notes' => ModelMpNote::getNotesCountByTypeAndIdOrder($id_order, 'embroidery'),
+                    'label' => 'Ricami',
+                    'icon' => 'timeline',
+                    'color' => 'var(--info)'
+                ],
+            ],
+        ];
+        $path = '@ModuleTwig/admin/AdminOrder.html.twig';
+
+        $template = (new GetTwigEnvironment($this->name))->load($path);
+        $html = $template->render($params);
+
+        return $html;
     }
 
     public function getWidgetVariables($hookName, array $configuration)
@@ -106,81 +217,29 @@ class MpNotes extends Module
 
     public function getContent()
     {
-        $template = new CreateTemplate($this->name);
-        $table = ModelMpNoteFlag::getTableTemplate();
-
+        $template = $this->context->smarty->createTemplate('configuration.tpl');
         $params = [
             'link' => $this->context->link,
             'moduleName' => $this->name,
             'frontController' => $this->context->link->getModuleLink($this->name, 'Config'),
             'table' => $table['html'] ?? '',
-            'icons' => ModelMpNoteFlag::getMaterialIconsList(),
+            'icons' => [],
         ];
-        $html = $template->createTemplate('configuration.tpl', $params);
+        $template->assign($params);
+
+        $html = $template->fetch();
 
         return $html;
     }
 
-    public function hookActionAdminControllerSetMedia()
+    public function hookActionAdminControllerSetMedia($params)
     {
-        $controller = Tools::strtolower(Tools::getValue('controller'));
+        $controller = Tools::getValue('controller');
         $id_order = (int) Tools::getValue('id_order');
-        $id_customer = (int) Tools::getValue('id_customer');
-        $id_employee = (int) Context::getContext()->employee->id;
 
-        $allowControllers = [
-            'adminorders',
-            'admincustomers',
-            'adminmodules',
-        ];
-
-        if (in_array($controller, $allowControllers)) {
-            $this->context->controller->addCSS([
-                $this->_path . 'views/js/sweetalert2.all.min.css',
-                $this->_path . 'views/css/style.css',
-            ], 'all', 100000);
-            $this->context->controller->addJS([
-                $this->_path . 'views/js/sweetalert2.all.min.js',
-                $this->_path . 'views/js/popper-core2.js',
-                $this->_path . 'views/js/tippy.js',
-                $this->_path . 'views/js/swalBoxes/SwalConfirm.js',
-                $this->_path . 'views/js/swalBoxes/SwalError.js',
-                $this->_path . 'views/js/swalBoxes/SwalInput.js',
-                $this->_path . 'views/js/swalBoxes/SwalSuccess.js',
-                $this->_path . 'views/js/swalBoxes/SwalWarning.js',
-                $this->_path . 'views/js/swalBoxes/SwalNote.js',
-            ]);
-        }
-
-        if ($controller == 'adminorders' && $id_order) {
-            $this->context->controller->addJS([
-                $this->_path . 'views/js/summaryPanel/summaryPanel.js',
-                $this->_path . 'views/js/notePanel/notePanel.js',
-                $this->_path . 'views/js/notePanel/notePanelAttachment.js',
-                $this->_path . 'views/js/notePanel/bindNoteAttachment.js',
-                $this->_path . 'views/js/notePanel/bindNoteFlags.js',
-                $this->_path . 'views/js/notePanel/bindSearchBar.js',
-            ]);
-        }
-
-        if ($controller == 'admincustomers' && $id_customer) {
-            $this->context->controller->addJS([
-                $this->_path . 'views/js/summaryPanel/summaryPanel.js',
-                $this->_path . 'views/js/notePanel/notePanel.js',
-                $this->_path . 'views/js/notePanel/notePanelAttachment.js',
-                $this->_path . 'views/js/notePanel/bindNoteAttachment.js',
-                $this->_path . 'views/js/notePanel/bindNoteFlags.js',
-                $this->_path . 'views/js/notePanel/bindSearchBar.js',
-            ]);
-        }
-
-        if ($controller === 'adminmodules') {
-            $this->context->controller->addJS([
-                $this->_path . 'views/js/asyncOperation/ProgressData.js',
-                $this->_path . 'views/js/asyncOperation/AsyncOperationClient.js',
-                $this->_path . 'views/js/asyncOperation/ProgressManager.js',
-                $this->_path . 'views/js/asyncOperation/ProgressOperation.js',
-            ]);
+        if (preg_match('/^AdminOrders/i', $controller) && $id_order) {
+            $path = $this->getLocalPath() . 'views/assets/';
+            $this->context->controller->addCSS("{$path}css/style.css");
         }
     }
 
@@ -196,8 +255,8 @@ class MpNotes extends Module
                 ->setName($this->trans('Note', [], 'Modules.Mpnotes.Admin'))
                 ->setOptions([
                     'field' => 'notes_count',
-                    'alignment' => 'center', // Centra il contenuto della colonna
-                    'sortable' => true, // Abilita l'ordinamento
+                    'alignment' => 'center',  // Centra il contenuto della colonna
+                    'sortable' => false,  // Abilita l'ordinamento
                 ])
         );
     }
@@ -207,27 +266,70 @@ class MpNotes extends Module
         /** @var \Doctrine\DBAL\Query\QueryBuilder $searchQueryBuilder */
         $searchQueryBuilder = $params['search_query_builder'];
 
-        // Verifica che la tabella mp_note esista prima di aggiungere la subquery
-        $tableExists = \Db::getInstance()->executeS(
-            'SHOW TABLES LIKE \'' . _DB_PREFIX_ . 'mp_note\''
-        );
-
-        if (!empty($tableExists)) {
-            // Usa direttamente la subquery nel calcolo per evitare problemi con gli alias
-            $noteCountSubquery = '(SELECT COUNT(id_mp_note) FROM `ps_mp_note` n WHERE ((n.id_customer = o.id_customer OR n.id_order = o.id_order) AND n.deleted = 0)) as notes_count';
-
-            // Formatta il conteggio come HTML con badge
-            $span = '<div class=\"text-center\"><span class=\"badge\" style=\"background-color: #007bff; color: #fcfcfc; padding: 6px; font-size: .90rem; border-radius: 50%;min-width: 24px; min-height: 24px;\">';
-            $searchQueryBuilder->addSelect($noteCountSubquery);
-        } else {
-            // Se la tabella non esiste, aggiungi comunque il campo ma con valore 0
-            $searchQueryBuilder->addSelect("'0' AS notes_count");
-        }
+        // Aggiungi un valore fittizio per notes_count che verrà popolato nel GridDataModifier
+        $searchQueryBuilder->addSelect("'0' AS notes_count");
     }
 
-    public function hookDisplayAdminOrderMain($params)
+    public function hookActionOrderGridDataModifier($params)
     {
-        // TODO
+        $records = $params['data']->getRecords()->all();
+        $table = _DB_PREFIX_ . ModelMpNote::$definition['table'];
+
+        foreach ($records as &$record) {
+            $idOrder = $record['id_order'];
+            $idCustomer = $record['id_customer'];
+
+            $rows = Db::getInstance()->executeS("
+                SELECT
+                    'person' as icon,
+                    COUNT(id_mpnote) as total_notes
+                FROM
+                    `{$table}`
+                WHERE (type='customer' and id_customer={$idCustomer})
+                AND deleted = 0
+
+                UNION
+
+                SELECT
+                    'shopping_cart' as icon,
+                    COUNT(id_mpnote) as total_notes
+                FROM
+                    `{$table}`
+                WHERE (type='order' and id_order={$idOrder})
+                AND deleted = 0
+
+                UNION 
+
+                SELECT
+                    'timeline' as icon,
+                    COUNT(id_mpnote) as total_notes
+                FROM
+                    `{$table}`
+                WHERE (type='embroidery' and id_customer={$idCustomer})
+                AND deleted = 0
+            ");
+
+            if ($rows) {
+                $twig = new GetTwigEnvironment($this->name);
+                $twig->load('@ModuleTwig/admin/orders/columns/countTypeMessages.html.twig');
+                $html = $twig->render(['rows' => $rows]);
+            } else {
+                $html = '--';
+            }
+
+            $record['notes_count'] = $html;
+        }
+
+        // Ricrea la collection con i dati modificati
+        $recordCollection = new PrestaShop\PrestaShop\Core\Grid\Record\RecordCollection($records);
+        $data = new PrestaShop\PrestaShop\Core\Grid\Data\GridData(
+            $recordCollection,
+            $params['data']->getRecordsTotal(),
+            $params['data']->getQuery()
+        );
+
+        // Assegna i dati modificati al parametro (passato per riferimento)
+        $params['data'] = $data;
     }
 
     public function hookDisplayAdminCustomers($params)
@@ -235,8 +337,14 @@ class MpNotes extends Module
         // TODO
     }
 
-    public function hookDisplayAdminOrderTop($params)
+    public function hookDisplayAdminOrderTop2($params)
     {
+        $path = $this->getLocalPath() . 'views/twig/test-nav.html.twig';
+        $template = (new GetTwigEnvironment($this->name))->load($path);
+        $html = $template->render();
+
+        return $html;
+
         $controller = Tools::strtolower(Tools::getValue('controller'));
         $orderId = (int) Tools::getValue('id_order');
         $customerId = (int) Tools::getValue('id_customer');
@@ -255,6 +363,7 @@ class MpNotes extends Module
                 ->createTemplate(
                     'AdminOrders/script.tpl',
                     [
+                        'noteControllerUrl' => $this->getAdminLink('admin_note_controller'),
                         'ajaxController' => $this->context->link->getModuleLink($this->name, 'Notes'),
                         'id_employee' => (int) $this->context->employee->id,
                     ]
@@ -294,5 +403,26 @@ class MpNotes extends Module
             AND n.entity_id = ' . (int) $entity_id . '
             ORDER BY n.date_add DESC
         ');
+    }
+
+    public function getAdminLink($controller, $method = 'index')
+    {
+        try {
+            $router = SymfonyContainer::getInstance()->get('router');
+            $routeName = 'mpnotes_' . strtolower($controller) . '_' . strtolower($method ?? 'index');
+
+            // Verifica se la route esiste
+            $routeCollection = $router->getRouteCollection();
+            if ($routeCollection && $routeCollection->get($routeName)) {
+                $url = $router->generate($routeName);
+                return $url;
+            } else {
+                // Fallback per compatibilità
+                return $this->context->link->getAdminLink($controller);
+            }
+        } catch (Exception $e) {
+            // Fallback in caso di errore
+            return null;
+        }
     }
 }
