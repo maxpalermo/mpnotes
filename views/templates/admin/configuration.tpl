@@ -1,176 +1,186 @@
+{if isset($flash) && $flash}
+    <div class="alert alert-success alert-dismissible show" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        <strong>
+            {foreach $flash as $msg}
+                <p>{$msg}</p>
+            {/foreach}
+        </strong> 
+    </div>
+{/if}
 <div class="panel">
     <div class="panel-heading">
         <i class="material-icons">settings</i> {l s='Import Messages' mod='mpnotes'}
     </div>
     <div class="panel-body">
-        <div class="import-container">
-            <div class="import-buttons">
-                <button type="button" id="import-customer-messages" class="btn btn-info">
-                    <div class="material-icons">person</div>
-                    <span>{l s='Importa messaggi cliente' mod='mpnotes'}</span>
-                </button>
-                <button type="button" id="import-order-messages" class="btn btn-warning">
-                    <div class="material-icons">shopping_cart</div>
-                    <span>{l s='Importa messaggi ordini' mod='mpnotes'}</span>
-                </button>
-                <button type="button" id="import-embroidery-messages" class="btn btn-success">
-                    <div class="material-icons">local_offer</div>
-                    <span>{l s='Importa messaggi ricami' mod='mpnotes'}</span>
-                </button>
-                <button type="button" id="truncate-tables" class="btn btn-danger">
-                    <div class="material-icons">delete</div>
-                    <span>{l s='Svuota tabelle' mod='mpnotes'}</span>
-                </button>
+        <form method="post" id="form-notes">
+            <div class="form-group">
+                <label for="endpoint">URL</label>
+                <input type="text" name="endpoint" class="form-control" value="{$endpoint}">
             </div>
+            <div class="form-group">
+                <label for="connector_token">Token</label>
+                <input type="text" name="connector_token" class="form-control fixed-width-xxl" value="{$connector_token}">
+            </div>
+            <button class="btn btn-default" type="submit" name="submitButton" value="save">
+                <i class="icon icon-save icon-2x"></i>
+                <br>
+                <span>Salva</span>
+            </button>
+            <button class="btn btn-default" type="submit" name="submitButton" value="truncate">
+                <i class="icon icon-trash icon-2x" style="color: var(--danger);"></i>
+                <br>
+                <span>Tronca tabelle</span>
+            </button>
+        </form>
+    </div>
 
-            <div class="progress-container">
-                <div class="progress-header">
-                    <h4>Operazione in corso</h4>
-                    <span id="progressPercent">0%</span>
-                </div>
-                <progress id="progressBar" value="0" max="100"></progress>
-                <p id="statusText" class="status-text">Pronto per iniziare...</p>
-                <div class="progress-buttons d-flex justify-content-center">
-                    <button id="cancelButton" class="btn btn-danger">Annulla</button>
-                </div>
-                <div class="d-flex justify-content-end">
-                    <div class="material-icons hourglass-animation">hourglass_empty</div>
-                </div>
-                <div id="resultContainer" class="result-container" style="display:none;">
-                    <h5>Risultato:</h5>
-                    <pre id="resultOutput"></pre>
+    <div class="panel-body">
+        <div class="row">
+            {foreach $curl as $key=>$value}
+            <div class="col-md-2" data-type="panelImport">
+                <div class="panel panel-info" style="min-height: 200px;">
+                    <div class="panel-heading">
+                        <p>Tabella<br>{$key}</p>
+                        <div class="badge" style="font-size: 0.75rem;">{$value.type}</div>
+                    </div>
+                    <div class="panel-body">
+                        <p class="text-center" style="font-size: 2rem;">{if isset($value.remote[0].total)}{$value.remote[0].total}{else}0{/if}</p>
+                        <p class="text-center text-info" style="font-size: 1rem;" data-id="displayImport">{if isset($value.recordCount)}{$value.recordCount}{else}0{/if}</p>
+                    </div>
+                    <div class="panel-footer">
+                        <button class="btn btn-default pull-right" type="button" name="import-{$value.type}" data-table="{$key}" data-type="import" data-offset="0" data-limit="5000">
+                            <i class="process-icon-download"></i>
+                            <span>{l s='Importa' mod='mpnotes'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
+            {/foreach}
         </div>
     </div>
 </div>
-
-
-{include file="./getContent/flags.tpl"}
 
 <script>
     let operation = null;
     let abortController = null;
     let signal = null;
     let progressData = null;
-    const frontController = '{$frontController}';
+    const adminControllerUrl = "{$adminControllerUrl}";
+    const endpoint = "{$endpoint}";
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
-        const statusText = document.getElementById('statusText');
-        const resultContainer = document.getElementById('resultContainer');
-        const truncateBtn = document.getElementById('truncate-tables');
-        const customerBtn = document.getElementById('import-customer-messages');
-        const orderBtn = document.getElementById('import-order-messages');
-        const embroideryBtn = document.getElementById('import-embroidery-messages');
-        const cancelButton = document.getElementById('cancelButton');
-        const saveFlagNote = document.getElementById('save-flag-note');
+    async function getTablesCount(tablename)
+    {
+        const endpoint = document.getElementById('endpoint').value;
+        const connector_token = document.getElementById('connector_token').value;
+        const query = `SELECT COUNT(*) FROM ${ tablename }`;
+        const formData = new FormData();
 
-        progressData = new ProgressData(100, progressBar, statusText, progressPercent);
+        formData.append('action', 'setQuery');
+        formData.append('ajax', 1);
+        formData.append('query', query);
+        formData.append('connector_token', connector_token);
 
-        saveFlagNote.addEventListener('click', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-
-            await saveFlagNote();
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            body: formData
         });
-
-        cancelButton.addEventListener("click", () => {
-            if (operation) {
-                operation.cancel();
-            } else {
-                console.warn('Nessuna operazione in corso da annullare');
-            }
-        });
-
-        customerBtn.addEventListener('click', async () => { await importCustomerList(); });
-        orderBtn.addEventListener('click', async () => { await importOrdersList(); });
-        embroideryBtn.addEventListener('click', async () => { await importEmbroideryList(); });
-
-        truncateBtn.addEventListener('click', async () => {
-            await truncateTables();
-        });
-    });
-
-    {include file="./getContent/truncateTable.js"}
-    {include file="./getContent/importCustomerList.js"}
-    {include file="./getContent/importOrdersList.js"}
-    {include file="./getContent/importEmbroideryList.js"}
-    {include file="./getContent/doImport.js"}
-
-
-
-    async function saveFlagNote() {
-        const confirm = await swalConfirm("Salvare il record?");
-        if (!confirm) return;
-
-        const formData = new FormData(document.getElementById('flag-note-form'));
-        formData.append("ajax", 1);
-        formData.append("action", "saveFlagNote");
-
-        const response = await fetch(
-            frontController, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: new URLSearchParams(formData)
-            }
-        );
-
-        const data = await response.json();
-
-        if (data.success) {
-            swal.fire({
-                icon: 'success',
-                title: 'Successo',
-                text: data.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-
-            updateTable();
-
-        } else {
-            swal.fire({
-                icon: 'error',
-                title: 'Errore',
-                text: data.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-        }
-
-        return false;
-    }
-
-
-
-    async function updateTable() {
-        const response = await fetch(
-            frontController, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: new URLSearchParams({
-                    ajax: 1,
-                    action: 'updateTableNote'
-                })
-            }
-        );
 
         if (!response.ok) {
-            progressData.end();
-            throw new Error('Errore durante l\'esecuzione dell\'operazione');
+            alert("Errore nella chiamata API");
         }
 
         const data = await response.json();
-        const table = document.getElementById('flags-notes-table');
-        table.closest("div").innerHTML = data.html;
+        const countRows = data.count;
+
+        return countRows;
     }
+
+    function onSubmitForm(event) {
+        if (!confirm("Procedere con l'operazione?")) {
+            event.preventDefault();
+            return false;
+        }
+    }
+
+    async function onClickBtn(event)
+    {
+        const el = event.target.closest("button");
+        if (el) {
+            if (!confirm("Procedere all'importazione dei dati?")) {
+                return false;
+            }
+            
+            const displayImport = el.closest("div[data-type=panelImport]").querySelector("p[data-id=displayImport]");
+            
+            if (displayImport) {
+                displayImport.textContent = "In esecuzione...";
+                await new Promise(requestAnimationFrame);
+            }
+            
+            await importTableData(el);
+        }
+    }
+
+    async function importTableData(el)
+    {
+        const table = el.dataset.table;
+            
+        operation = "import";
+        abortController = new AbortController();
+        signal = abortController.signal;
+        
+        const offset = el.dataset.offset;
+        const limit = el.dataset.limit;
+        const formData = new FormData();
+        formData.append("ajax", 1);
+        formData.append("action", "importV16");
+        formData.append("table", table);
+        formData.append("offset", offset);
+        formData.append("limit", limit);
+
+        const response = await fetch(adminControllerUrl, {
+            method: 'POST',
+            body: formData,
+            signal: signal
+        });
+
+        if (!response.ok) {
+            alert("Errore nella chiamata API");
+            return false;
+        }
+
+        const data = await response.json();
+        
+        const displayImport = el.closest("div[data-type=panelImport]").querySelector("p[data-id=displayImport]");
+        if (displayImport) {
+            displayImport.textContent = `Importati ${ data.offset } record`;
+            await new Promise(requestAnimationFrame);
+        }
+
+        if (data.success && !data.done) {
+            el.dataset.offset = data.offset;
+            el.dataset.limit = data.limit;
+            await importTableData(el);
+        } else { 
+            alert("Operazione eseguita");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const btnsImport = document.querySelectorAll("button[data-type=import]")
+        const form = document.querySelector("#form-notes");
+
+        if (btnsImport) {
+            btnsImport.forEach(btn => {
+                btn.addEventListener('click', onClickBtn);
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', onSubmitForm);
+        }
+    });
 </script>

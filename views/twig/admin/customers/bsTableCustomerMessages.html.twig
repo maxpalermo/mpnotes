@@ -1,0 +1,42 @@
+<div class="card customer-notes-card" id="customer-notes-card">
+    <h3 class="card-header">
+        <i class="material-icons">message</i>
+        Messaggi privati sul cliente
+        <span class="badge badge-primary rounded" id="customer-note-count">17</span>
+    </h3>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <span class="spinner"></span>
+            <span>Caricamento dati in corso...</span>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div style="display: flex; justify-content: end; align-items: center; margin-right: 1rem;">
+            <button class="btn btn-primary btn-sm" onclick="showMpNotePanel({{ id_customer }})" title="Aggiungi una nuova nota">
+                <span class="material-icons">add</span>
+                <span>Nuova nota</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ asset('js/adminCustomers/script.js') }}"></script>
+
+<script type="text/javascript">
+    const mpnote_endpoint = "{{ endpoint | raw }}";
+    const mpnote_id_customer = "{{ id_customer }}";
+
+    document.addEventListener("DOMContentLoaded", async (e) =>{
+        const customerMessagePanel = document.querySelector(".customer-private-note-card");
+        const customerNewMessagePanel = document.querySelector("#customer-notes-card");
+        const customerMessageCard = document.querySelector(".customer-messages-card");
+        if (customerMessagePanel) {
+            customerMessagePanel.style.display="none";
+        }
+
+        if (customerNewMessagePanel && customerMessageCard && customerMessageCard.parentNode) {
+            customerMessageCard.parentNode.insertBefore(customerNewMessagePanel, customerMessageCard);
+            await loadCustomerNotes();
+        }
+    });
+</script>

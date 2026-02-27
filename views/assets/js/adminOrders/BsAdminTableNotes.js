@@ -1,4 +1,4 @@
-class BsTableNotes {
+class BsAdminTableNotes {
     tableId = "";
     endpoint = null;
     orderId = 0;
@@ -20,7 +20,6 @@ class BsTableNotes {
 
     setType(type) {
         this.type = type;
-        this.updateColumnVisibility();
     }
 
     setId(id) {
@@ -32,7 +31,6 @@ class BsTableNotes {
             type = this.type;
         }
         $(this.table).bootstrapTable("refresh", { silent: true });
-        this.updateColumnVisibility();
         this.bindButtons();
     }
 
@@ -70,7 +68,7 @@ class BsTableNotes {
             queryParams: function (params) {
                 const searchParams = {
                     ajax: 1,
-                    action: "fetchAllNotes",
+                    action: "fetchAdminAllNotes",
                     id: self.id,
                     type: self.type,
                     limit: params.limit,
@@ -125,7 +123,6 @@ class BsTableNotes {
                 self.fixDropDownPagination();
                 self.setBootstrapTableIcons();
                 self.bindNewNote();
-                self.updateColumnVisibility();
                 self.hideOldCustomerNotePanel();
             },
             columns: [
@@ -138,6 +135,29 @@ class BsTableNotes {
                     filterControl: "input",
                     formatter: function (value, row, index) {
                         return `<span style="font-family:'monospace';">${value}</span>`;
+                    },
+                },
+                {
+                    field: "type",
+                    title: "Tipo",
+                    align: "left",
+                    sortable: true,
+                    uniqueId: true,
+                    filterControl: "input",
+                    formatter: function (value, row, index) {
+                        let type = "--";
+                        switch (value) {
+                            case "customer":
+                                type = "Cliente";
+                                break;
+                            case "order":
+                                type = "Ordine";
+                                break;
+                            case "embroidery":
+                                type = "Ricamo";
+                                break;
+                        }
+                        return `<span style="font-family:'monospace';">${type}</span>`;
                     },
                 },
                 {
@@ -159,25 +179,60 @@ class BsTableNotes {
                     },
                 },
                 {
-                    field: "gravity",
-                    title: "tipo",
-                    align: "center",
-                    width: 38,
+                    field: "orderDetail",
+                    title: "Ordine",
+                    align: "left",
                     sortable: true,
                     filterControl: "input",
                     formatter: function (value, row, index) {
-                        switch (value) {
-                            case "info":
-                                return `<span class="btn-toggle-gravity material-icons text-info d-center-center" title="Info" data-id-note="${row.id_mpnote}">info</span>`;
-                            case "warning":
-                                return `<span class="btn-toggle-gravity material-icons text-warning d-center-center" title="Avviso" data-id-note="${row.id_mpnote}">warning</span>`;
-                            case "error":
-                                return `<span class="btn-toggle-gravity material-icons text-danger d-center-center" title="Errore" data-id-note="${row.id_mpnote}">error</span>`;
-                            case "success":
-                                return `<span class="btn-toggle-gravity material-icons text-success d-center-center" title="Successo" data-id-note="${row.id_mpnote}">check_circle</span>`;
-                            default:
-                                return `<span class="btn-toggle-gravity material-icons text-info d-center-center" title="Info" data-id-note="${row.id_mpnote}">info</span>`;
+                        if (value) {
+                            return value;
                         }
+
+                        return "--";
+                    },
+                },
+                {
+                    field: "id_customer",
+                    title: "Id Cliente",
+                    align: "left",
+                    sortable: true,
+                    filterControl: "input",
+                    formatter: function (value, row, index) {
+                        const customerId = row.id_customer;
+                        if (row.id_customer > 0) {
+                            return `<a href="${row.editCustomerUrl}" target="_blank"><span style="font-family:'monospace';">${value}</span></a>`;
+                        } else {
+                            return `<span style="font-family:'monospace';">--</span>`;
+                        }
+                    },
+                },
+                {
+                    field: "customerDetail",
+                    title: "Cliente",
+                    align: "left",
+                    sortable: true,
+                    filterControl: "input",
+                    formatter: function (value, row, index) {
+                        if (value) {
+                            return value;
+                        }
+
+                        return "--";
+                    },
+                },
+                {
+                    field: "customerEmail",
+                    title: "email",
+                    align: "left",
+                    sortable: true,
+                    filterControl: "input",
+                    formatter: function (value, row, index) {
+                        if (value) {
+                            return value;
+                        }
+
+                        return "--";
                     },
                 },
                 {
@@ -185,6 +240,8 @@ class BsTableNotes {
                     title: "Contenuto",
                     align: "left",
                     sortable: true,
+                    width: "250px",
+                    class: "cell-content",
                     formatter: function (value, row, index) {
                         return self.unescapeQuotes(row.content);
                     },
@@ -260,7 +317,7 @@ class BsTableNotes {
                     field: "action",
                     title: "Azioni",
                     align: "center",
-                    width: 50,
+                    width: "100px",
                     sortable: false,
                     formatter: function (value, row, index) {
                         return `
@@ -281,63 +338,6 @@ class BsTableNotes {
 
     unescapeQuotes(str) {
         return String(str).replace(/\\(['"])/g, "$1");
-    }
-
-    updateColumnVisibility() {
-        if (!this.table) {
-            return;
-        }
-
-        const $table = $(this.table);
-        if (!$table || typeof $table.bootstrapTable !== "function") {
-            return;
-        }
-
-        switch (this.type) {
-            case "customer":
-                $table.bootstrapTable("showColumn", "id_mpnote");
-                $table.bootstrapTable("hideColumn", "id_order");
-                $table.bootstrapTable("hideColumn", "gravity");
-                $table.bootstrapTable("showColumn", "content");
-                $table.bootstrapTable("showColumn", "employee_firstname");
-                $table.bootstrapTable("showColumn", "employee_lastname");
-                $table.bootstrapTable("hideColumn", "printable");
-                $table.bootstrapTable("hideColumn", "chat");
-                $table.bootstrapTable("hideColumn", "attachments");
-                $table.bootstrapTable("showColumn", "date_add");
-                $table.bootstrapTable("hideColumn", "date_upd");
-                $table.bootstrapTable("hideColumn", "action");
-                break;
-            case "order":
-                $table.bootstrapTable("showColumn", "id_mpnote");
-                $table.bootstrapTable("hideColumn", "id_order");
-                $table.bootstrapTable("hideColumn", "gravity");
-                $table.bootstrapTable("showColumn", "content");
-                $table.bootstrapTable("showColumn", "employee_firstname");
-                $table.bootstrapTable("showColumn", "employee_lastname");
-                $table.bootstrapTable("showColumn", "printable");
-                $table.bootstrapTable("showColumn", "chat");
-                $table.bootstrapTable("showColumn", "attachments");
-                $table.bootstrapTable("showColumn", "date_add");
-                $table.bootstrapTable("hideColumn", "date_upd");
-                $table.bootstrapTable("hideColumn", "action");
-                break;
-            case "embroidery":
-                $table.bootstrapTable("showColumn", "id_mpnote");
-                $table.bootstrapTable("showColumn", "id_order");
-                $table.bootstrapTable("hideColumn", "gravity");
-                $table.bootstrapTable("showColumn", "content");
-                $table.bootstrapTable("showColumn", "employee_firstname");
-                $table.bootstrapTable("showColumn", "employee_lastname");
-                $table.bootstrapTable("hideColumn", "printable");
-                $table.bootstrapTable("hideColumn", "chat");
-                $table.bootstrapTable("showColumn", "attachments");
-                $table.bootstrapTable("showColumn", "date_add");
-                $table.bootstrapTable("hideColumn", "date_upd");
-                break;
-            default:
-                break;
-        }
     }
 
     formatAttachments(value, row, index) {

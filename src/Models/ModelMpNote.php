@@ -39,61 +39,40 @@ class ModelMpNote extends ObjectModel
     const TYPE_ORDER = 'order';
     const TYPE_EMBROIDERY = 'embroidery';
 
-    public $id_history;
-
+    public $id_import;
+    public $id_parent;
     public $type;
-
     public $reference;
-
     public $id_customer;
-
     public $id_order;
-
     public $id_employee;
-
+    public $customer_firstname;
+    public $customer_lastname;
     public $employee_firstname;
-
     public $employee_lastname;
-
-    public $gravity;
-
     public $content;
-
     public $printable;
-
     public $chat;
-
     public $deleted;
-
     public $date_add;
-
     public $date_upd;
-
-    protected $customer_firstname;
-
-    protected $customer_lastname;
-
-    protected $gravityIcons = [
-        'info' => 'info',
-        'warning' => 'warning',
-        'error' => 'error',
-        'success' => 'check_circle',
-    ];
 
     public static $definition = [
         'table' => 'mpnote',
         'primary' => 'id_mpnote',
         'fields' => [
-            'id_history' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'default' => 0],
-            'type' => ['type' => self::TYPE_STRING, 'validate' => 'isString', 'size' => 16, 'default' => 'undefined'],
-            'reference' => ['type' => self::TYPE_STRING, 'validate' => 'isString', 'size' => 16, 'default' => 'undefined'],
+            'id_import' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'default' => 0],
+            'id_parent' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'default' => 0],
+            'type' => ['type' => self::TYPE_STRING, 'validate' => 'isString', 'size' => 16, 'default' => 'note'],
+            'reference' => ['type' => self::TYPE_STRING, 'validate' => 'isString', 'size' => 64, 'default' => 'note'],
             'id_customer' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId'],
             'id_order' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'default' => 0],
             'id_employee' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId'],
+            'customer_firstname' => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'size' => 64],
+            'customer_lastname' => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'size' => 64],
             'employee_firstname' => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'size' => 64],
             'employee_lastname' => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'size' => 64],
-            'gravity' => ['type' => self::TYPE_STRING, 'validate' => 'isString', 'size' => 16, 'default' => 'INFO'],
-            'content' => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'required' => true, 'size' => 99999999],
+            'content' => ['type' => self::TYPE_STRING, 'validate' => 'isCleanHtml', 'required' => true, 'size' => 99999999],
             'printable' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => false, 'default' => 0],
             'chat' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => false, 'default' => 0],
             'deleted' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => false, 'default' => 0],
@@ -104,6 +83,14 @@ class ModelMpNote extends ObjectModel
 
     public function getFieldsList()
     {
+        $id_lang = (int) \Context::getContext()->language->id;
+        if ($this->id_order) {
+            $order = new Order($this->id_order, $id_lang);
+            if (Validate::isLoadedObject($order)) {
+                $this->id_customer = $order->id_customer;
+                $this->reference = $order->reference;
+            }
+        }
         if ($this->id_customer) {
             $customer = new Customer($this->id_customer);
             if (Validate::isLoadedObject($customer)) {
@@ -116,7 +103,8 @@ class ModelMpNote extends ObjectModel
         }
         return [
             'id' => $this->id,
-            'id_history' => $this->id_history,
+            'id_import' => $this->id_import,
+            'id_parent' => $this->id_parent,
             'type' => $this->type,
             'reference' => $this->reference,
             'id_customer' => $this->id_customer,
@@ -126,7 +114,6 @@ class ModelMpNote extends ObjectModel
             'id_employee' => $this->id_employee,
             'employee_firstname' => $this->employee_firstname,
             'employee_lastname' => $this->employee_lastname,
-            'gravity' => $this->gravity,
             'content' => $this->content,
             'printable' => (int) $this->printable,
             'chat' => (int) $this->chat,
@@ -228,7 +215,7 @@ class ModelMpNote extends ObjectModel
             }
             $note['employee'] = $employees[$note['id_employee']]->firstname . ' ' . $employees[$note['id_employee']]->lastname;
             $note['gravity_icon'] = self::$gravityIcons[$note['gravity']] ?? 'help';
-            $note['attachments'] = self::getAttachments($note['id'], $type);
+            $note['attachments'] = json_encode(self::getAttachments($note['id'], $type));
             $note['editOrderUrl'] = \Context::getContext()->link->getAdminLink('AdminOrders', true, [], ['id_order' => (int) $note['id_order'], 'vieworder' => 1]);
         }
 
@@ -309,8 +296,12 @@ class ModelMpNote extends ObjectModel
         $queryCustomer
             ->select('c.id_customer, c.firstname, c.lastname')
             ->from('orders', 'o')
-            ->innerJoin('customer', 'c', 'o.id_customer=c.id_customer')
-            ->where('o.id_order=' . (int) $params['id_order']);
+            ->innerJoin('customer', 'c', 'o.id_customer=c.id_customer');
+
+        if (isset($params['id_order']) && $params['id_order']) {
+            $queryCustomer->where('o.id_order=' . (int) $params['id_order']);
+        }
+
         $customer = $db->getRow($queryCustomer);
         if ($customer) {
             $customer['name'] = Tools::ucwords($customer['firstname'] . ' ' . $customer['lastname']);
@@ -329,23 +320,26 @@ class ModelMpNote extends ObjectModel
             ->select('a.*, GROUP_CONCAT(DISTINCT b.id_mpnote_attachment) as attachments')
             ->from('mpnote', 'a')
             ->leftJoin(ModelMpNoteAttachment::$definition['table'], 'b', 'a.id_mpnote = b.id_mpnote')
-            ->where("a.type = '{$params['type']}'")
             ->groupBy('a.id_mpnote')
             ->orderBy($params['orderBy'] . ' ' . $params['sort']);
 
-        if ($params['type'] == 'customer') {
-            $query->where("a.id_customer = {$customer['id_customer']}");
-            $queryCount->where("a.id_customer = {$customer['id_customer']}");
-        }
+        if ($params['type']) {
+            $query->where("a.type = '{$params['type']}'");
 
-        if ($params['type'] == 'order') {
-            $query->where("a.id_order = {$params['id_order']}");
-            $queryCount->where("a.id_order = {$params['id_order']}");
-        }
+            if ($params['type'] == 'customer') {
+                $query->where("a.id_customer = {$customer['id_customer']}");
+                $queryCount->where("a.id_customer = {$customer['id_customer']}");
+            }
 
-        if ($params['type'] == 'embroidery') {
-            $query->where("a.id_customer = {$customer['id_customer']}");
-            $queryCount->where("a.id_customer = {$customer['id_customer']}");
+            if ($params['type'] == 'order') {
+                $query->where("a.id_order = {$params['id_order']}");
+                $queryCount->where("a.id_order = {$params['id_order']}");
+            }
+
+            if ($params['type'] == 'embroidery') {
+                $query->where("a.id_customer = {$customer['id_customer']}");
+                $queryCount->where("a.id_customer = {$customer['id_customer']}");
+            }
         }
 
         if ($params['search']) {
@@ -362,8 +356,18 @@ class ModelMpNote extends ObjectModel
         $filtered = $db->getValue($queryCount);
 
         foreach ($notes as &$note) {
-            $note['attachments'] = self::renderAttachments($note['attachments']);
-            $note['editOrderUrl'] = \Context::getContext()->link->getAdminLink('AdminOrders', true, [], ['id_order' => (int) $note['id_order'], 'vieworder' => 1]);
+            $note['attachments'] = self::getAttachmentList($note['attachments'], true);  // self::renderAttachments($note['attachments']);
+            if ($note['id_order']) {
+                $order = new Order($note['id_order']);
+                $note['editOrderUrl'] = \Context::getContext()->link->getAdminLink('AdminOrders', true, [], ['id_order' => (int) $note['id_order'], 'vieworder' => 1]);
+                $note['orderDetail'] = $order->reference . ' del ' . Tools::formatDateStr($order->date_add, false);
+            }
+            if ($note['id_customer']) {
+                $customer = new Customer($note['id_customer']);
+                $note['editCustomerUrl'] = \Context::getContext()->link->getAdminLink('AdminCustomers', true, [], ['id_customer' => (int) $note['id_customer'], 'viewcustomer' => 1]);
+                $note['customerDetail'] = Tools::ucwords($customer->firstname . ' ' . $customer->lastname);
+                $note['customerEmail'] = Tools::strtolower($customer->email);
+            }
         }
 
         return [
@@ -374,6 +378,44 @@ class ModelMpNote extends ObjectModel
             'totalNotFiltered' => $totalRows,
             'query' => $query->build(),
         ];
+    }
+
+    public static function getAttachmentList($attachments, $asJson = false)
+    {
+        $ids = explode(',', $attachments);
+
+        if (!$ids) {
+            return [];
+        }
+
+        $list = [];
+
+        foreach ($ids as $id) {
+            $attachment = new ModelMpNoteAttachment((int) $id);
+            if (Validate::isLoadedObject($attachment)) {
+                $filename = $attachment->filename;
+                $filetitle = $attachment->filetitle;
+                $path = _PS_IMG_DIR_ . 'mpnotes/' . trim(ltrim($filename, '/'));
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $mime = $finfo->file($path);  // es: application/pdf
+
+                // fallback se non riesce
+                if (!$mime) {
+                    $mime = 'application/octet-stream';
+                }
+
+                $url = \Context::getContext()->link->getBaseLink() . 'img/mpnotes/' . trim(ltrim($filename, '/'));
+
+                $list[] = [
+                    'id_attachment' => $attachment->id,
+                    'title' => $filetitle,
+                    'url' => $url,
+                    'mime' => $mime,
+                ];
+            }
+        }
+
+        return $asJson ? base64_encode(json_encode($list)) : $list;
     }
 
     public static function renderAttachments($attachments)
@@ -489,7 +531,12 @@ class ModelMpNote extends ObjectModel
             ->where('type = ' . (int) $type)
             ->where('id_mpnote = ' . (int) $id_note);
 
-        return Db::getInstance()->executeS($query);
+        $list = Db::getInstance()->executeS($query);
+        if (!$list) {
+            return [];
+        }
+
+        return $list;
     }
 
     public static function install()
@@ -499,21 +546,24 @@ class ModelMpNote extends ObjectModel
         $QUERY = "
             CREATE TABLE IF NOT EXISTS `{$pfx}mpnote` (
                 `id_mpnote` int(10) NOT NULL AUTO_INCREMENT,
-                `type` varchar(16) DEFAULT NULL,
-                `id_order` int(10) DEFAULT 0,
+                `id_import` int(11) UNSIGNED NOT NULL DEFAULT 0,
+                `id_parent` int(10) UNSIGNED NOT NULL DEFAULT 0,
+                `type` varchar(16) NOT NULL DEFAULT 'undefined',
+                `reference` varchar(64) DEFAULT NULL,
                 `id_customer` int(10) DEFAULT NULL,
+                `id_order` int(10) DEFAULT 0,
                 `id_employee` int(10) DEFAULT NULL,
-                `employee_firstname` varchar(64) DEFAULT NULL,
-                `employee_lastname` varchar(64) DEFAULT NULL,
-                `gravity` varchar(16) DEFAULT 'info',
+                `customer_firstname` varchar(64) DEFAULT NULL,
+                `customer_lastname` varchar(64) DEFAULT NULL,
+                `employee_firstname` varchar(64) NOT NULL,
+                `employee_lastname` varchar(64) NOT NULL,
                 `content` text NOT NULL,
-                `printable` tinyint(1) DEFAULT 0,
-                `chat` tinyint(1) DEFAULT 0,
+                `printable` tinyint(1) NOT NULL DEFAULT 0,
+                `chat` tinyint(1) NOT NULL DEFAULT 0,
                 `deleted` tinyint(1) DEFAULT 0,
                 `date_add` datetime DEFAULT NULL,
                 `date_upd` datetime DEFAULT NULL,
                 PRIMARY KEY (`id_mpnote`),
-                KEY `id_note_type` (`id_note_type`),
                 KEY `id_customer` (`id_customer`),
                 KEY `id_employee` (`id_employee`),
                 KEY `id_order` (`id_order`)

@@ -4,10 +4,10 @@
     {% for row in rows %}
         {% set color = colors[loop.index0] ?? 'text-info' %}
         {% set legend = legends[loop.index0] ?? '--' %}
-        <span>
+        <div style="min-width: 32px; display: flex; justify-content: start; align-items: center;">
             <span class="material-icons mr-1 {{ color }}" title="{{ legend }}">{{ row.icon }}</span>
             <span>{{ row.total_notes }}</span>
-        </span>
+        </div>
     {% endfor %}
 {% else %}
     <span>--</span>

@@ -332,6 +332,11 @@ class MpNoteDialog extends HTMLElement {
         } finally {
             this._btnSave.disabled = false;
             this._btnSave.innerHTML = prevHtml;
+            const table = document.getElementById("bsTblNotes");
+            if (table) {
+                table.dispatchEvent(new CustomEvent("mpnote:refresh"));
+                $(table).bootstrapTable("refresh");
+            }
         }
     }
 }

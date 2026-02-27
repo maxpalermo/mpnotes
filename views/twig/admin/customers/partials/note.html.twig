@@ -1,0 +1,14 @@
+<div class="form-control" data-id-customer="{{ id_customer }}" data-id-mpnote="{{ id_mpnote }}">
+    <label>Inserisci la nota</label>
+    <textarea name="mpnote" id="mpnote-note" class="form-control">{{ content }}</textarea>
+    <div style="display: flex; justify-content: right; align-items: center; margin-top: 1rem; gap: 2rem;">
+        <button type="button" class="btn btn-primary" onclick="addNoteDetails(this);">
+            <span class="material-icons">save</span>
+            Inserisci
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="closeMpNotePanel();">
+            <span class="material-icons">close</span>
+            Chiudi
+        </button>
+    </div>
+</div>

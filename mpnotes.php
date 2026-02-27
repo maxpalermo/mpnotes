@@ -1,37 +1,9 @@
 <?php
 
-use MpSoft\MpNotes\Helpers\CreateTemplate;
-
-/**
- * Copyright since 2007 PrestaShop SA and Contributors
- * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License version 3.0
- * that is bundled with this package in the file LICENSE.md.
- * It is also available through the world-wide-web at this URL:
- * https://opensource.org/licenses/AFL-3.0
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@prestashop.com so we can send you a copy immediately.
- *
- * @author    Massimiliano Palermo <maxx.palermo@gmail.com>
- * @copyright Since 2016 Massimiliano Palermo
- * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
- */
-if (!defined('_PS_VERSION_')) {
-    exit;
-}
-
-require_once dirname(__FILE__) . '/vendor/autoload.php';
-
+use MpSoft\MpNotes\Helpers\CurlExec;
 use MpSoft\MpNotes\Helpers\GetTwigEnvironment;
-use MpSoft\MpNotes\Helpers\NoteManager;
-use MpSoft\MpNotes\Helpers\TableGenerator;
 use MpSoft\MpNotes\Models\ModelMpNote;
 use MpSoft\MpNotes\Models\ModelMpNoteAttachment;
-use MpSoft\MpNotes\Models\ModelMpNoteFlag;
 use MpSoft\MpNotes\Traits\ModuleTraits;
 use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShop\PrestaShop\Core\Module\WidgetInterface;
@@ -44,7 +16,7 @@ class MpNotes extends Module implements WidgetInterface
     {
         $this->name = 'mpnotes';
         $this->tab = 'administration';
-        $this->version = '2.2.36';
+        $this->version = '2.2.48';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -75,21 +47,47 @@ class MpNotes extends Module implements WidgetInterface
             $this->installTab();
     }
 
-    protected function installTab()
+    protected static function getTabRepository()
     {
         $tabRepository = SymfonyContainer::getInstance()->get('prestashop.core.admin.tab.repository');
-        $id_ParentCustomer = $tabRepository->findOneIdByClassName('AdminParentCustomer');
 
-        $tab = new Tab();
-        $tab->class_name = 'AdminMpNotes';
-        $tab->module = $this->name;
-        $tab->id_parent = (int) $id_ParentCustomer;
-        $tab->icon = 'icon-note';
-        foreach (Language::getLanguages() as $language) {
-            $tab->name[$language['id_lang']] = $this->l('MP Note clienti');
+        return $tabRepository;
+    }
+
+    protected function installTab()
+    {
+        $parentClass = 'AdminOtherModulesMp';
+        $tabRepository = static::getTabRepository();
+        $sellId = (int) $tabRepository->findOneIdByClassName('SELL');
+        $parentId = (int) $tabRepository->findOneIdByClassName($parentClass);
+
+        if (!$parentId) {
+            $parentTab = new Tab();
+            $parentTab->class_name = $parentClass;
+            $parentTab->module = $this->name;
+            $parentTab->id_parent = $sellId;
+            $parentTab->active = 1;
+            $parentTab->icon = 'extension';
+            foreach (Language::getLanguages() as $language) {
+                $parentTab->name[$language['id_lang']] = $this->l('ALTRI MODULI');
+            }
+            $parentTab->add();
+            $parentId = (int) $parentTab->id;
         }
 
-        return $tab->add();
+        $childClass = 'AdminMpNotes';
+        $childId = $tabRepository->findOneIdByClassName($childClass);
+        $tab = $childId ? new Tab($childId) : new Tab();
+        $tab->class_name = $childClass;
+        $tab->module = $this->name;
+        $tab->id_parent = $parentId;
+        $tab->active = 1;
+        $tab->icon = 'icon-note';
+        foreach (Language::getLanguages() as $language) {
+            $tab->name[$language['id_lang']] = $this->l('Messaggi');
+        }
+
+        return $childId ? $tab->update() : $tab->add();
     }
 
     public function uninstall()
@@ -100,11 +98,12 @@ class MpNotes extends Module implements WidgetInterface
 
     protected function uninstallTab()
     {
-        $tabRepository = SymfonyContainer::getInstance()->get('prestashop.core.admin.tab.repository');
-        $id_tab = $tabRepository->findOneIdByClassName('AdminMpNotes');
-        $tab = new Tab($id_tab);
-
-        $tab->delete();
+        $tabRepository = static::getTabRepository();
+        $childId = $tabRepository->findOneIdByClassName('AdminMpNotes');
+        if ($childId) {
+            $tab = new Tab($childId);
+            $tab->delete();
+        }
 
         return true;
     }
@@ -217,19 +216,59 @@ class MpNotes extends Module implements WidgetInterface
 
     public function getContent()
     {
-        $template = $this->context->smarty->createTemplate('configuration.tpl');
+        if (Tools::isSubmit('submitButton')) {
+            switch (Tools::getValue('submitButton')) {
+                case 'save':
+                    $endpoint = Tools::getValue('endpoint');
+                    $connector_token = Tools::getValue('connector_token');
+                    Configuration::updateValue('MPCONNECTOR_ENDPOINT', $endpoint);
+                    Configuration::updateValue('MPCONNECTOR_TOKEN', $connector_token);
+                    $this->_confirmations[] = $this->l('Impostazioni salvate');
+                    break;
+                case 'truncate':
+                    $this->truncateTables();
+                    $this->_confirmations[] = $this->l('Tabelle svuotate');
+            }
+        }
+
+        $path = $this->getLocalPath() . 'views/templates/admin/';
+        $template = $this->context->smarty->createTemplate("{$path}configuration.tpl");
         $params = [
             'link' => $this->context->link,
             'moduleName' => $this->name,
-            'frontController' => $this->context->link->getModuleLink($this->name, 'Config'),
+            'adminControllerUrl' => $this->context->link->getAdminLink('AdminMpNotes'),
             'table' => $table['html'] ?? '',
             'icons' => [],
+            'endpoint' => Configuration::get('MPCONNECTOR_ENDPOINT'),
+            'connector_token' => Configuration::get('MPCONNECTOR_TOKEN'),
+            'curl' => $this->getRecordCount(),
+            'flash' => $this->_confirmations,
         ];
         $template->assign($params);
 
         $html = $template->fetch();
 
         return $html;
+    }
+
+    private function getRecordCount()
+    {
+        $endpoint = \Configuration::get('MPCONNECTOR_ENDPOINT');
+        $token = \Configuration::get('MPCONNECTOR_TOKEN');
+        $action = 'setQuery';
+
+        if ($endpoint && $token) {
+            return [
+                'MpCustomerArchive' => CurlExec::exec($endpoint, $action, 'select count(*) as total from ps_customer_archive', $token, 'embroidery', '#customer_archive'),
+                'MpCustomerArchiveItem' => CurlExec::exec($endpoint, $action, 'select count(*) as total from ps_customer_archive_item', $token, 'embroidery', '@customer_archive_item'),
+                'MpCustomerMessages' => CurlExec::exec($endpoint, $action, 'select count(*) as total from ps_customer_messages', $token, 'customer', '#customer_messages'),
+                'MpCustomerPrivateNote' => CurlExec::exec($endpoint, $action, 'select count(*) as total from ps_customer where `note` is not null', $token, 'customer', '#customer'),
+                'MpCustomerOrderNotes' => CurlExec::exec($endpoint, $action, 'select count(*) as total from ps_mp_customer_order_notes', $token, 'order', '#mp_customer_order_notes'),
+                'MpCustomerOrderNotesAttachments' => CurlExec::exec($endpoint, $action, 'select count(*) as total from ps_mp_customer_order_notes_attachments', $token, 'order', '@mp_customer_order_notes_attachments'),
+            ];
+        }
+
+        return false;
     }
 
     public function hookActionAdminControllerSetMedia($params)
@@ -334,95 +373,32 @@ class MpNotes extends Module implements WidgetInterface
 
     public function hookDisplayAdminCustomers($params)
     {
-        // TODO
+        $twig = (new GetTwigEnvironment($this->name));
+        $twig->load('@ModuleTwig/admin/customers/bsTableCustomerMessages.html.twig');
+
+        return $twig->render([
+            'endpoint' => $this->context->link->getAdminLink('AdminMpNotes'),
+            'id_customer' => (int) $params['id_customer'],
+        ]);
     }
 
-    public function hookDisplayAdminOrderTop2($params)
+    public function truncateTables()
     {
-        $path = $this->getLocalPath() . 'views/twig/test-nav.html.twig';
-        $template = (new GetTwigEnvironment($this->name))->load($path);
-        $html = $template->render();
+        $tables = [
+            'mpnote',
+            'mpnote_attachment',
+        ];
 
-        return $html;
+        foreach ($tables as $table) {
+            $table = _DB_PREFIX_ . $table;
+            $sql = "TRUNCATE TABLE {$table}";
 
-        $controller = Tools::strtolower(Tools::getValue('controller'));
-        $orderId = (int) Tools::getValue('id_order');
-        $customerId = (int) Tools::getValue('id_customer');
-        $html = '';
-        $script = '';
-
-        if ($controller == 'adminorders' && $orderId) {
-            $order = new \Order($orderId);
-            if (!Validate::isLoadedObject($order)) {
-                return '';
-            }
-            $id_order = (int) $order->id;
-            $id_customer = (int) $order->id_customer;
-            $html = (new NoteManager())->render($id_order, $id_customer, ['show_on_order_page' => true]);
-            $script = (new CreateTemplate($this->name))
-                ->createTemplate(
-                    'AdminOrders/script.tpl',
-                    [
-                        'noteControllerUrl' => $this->getAdminLink('admin_note_controller'),
-                        'ajaxController' => $this->context->link->getModuleLink($this->name, 'Notes'),
-                        'id_employee' => (int) $this->context->employee->id,
-                    ]
-                );
-        } elseif ($controller == 'admincustomers' && $customerId) {
-            $customer = new \Customer($customerId);
-            if (!Validate::isLoadedObject($customer)) {
-                return '';
-            }
-            $id_customer = (int) $customer->id;
-            $html = (new NoteManager())->render(0, $id_customer, ['show_on_customer_page' => true]);
-            $script = (new CreateTemplate($this->name))
-                ->createTemplate(
-                    'AdminCustomers/script.tpl',
-                    [
-                        'ajaxController' => $this->context->link->getModuleLink($this->name, 'Notes'),
-                        'id_employee' => (int) $this->context->employee->id,
-                    ]
-                );
+            Db::getInstance()->execute($sql);
         }
 
-        return $script . $html;
-    }
-
-    public function hookDisplayAdminEndContent($params)
-    {
-        // todo
-    }
-
-    public function getNotes($entity_type, $entity_id)
-    {
-        return Db::getInstance()->executeS('
-            SELECT n.*, e.firstname, e.lastname
-            FROM `' . _DB_PREFIX_ . 'mpnotes` n
-            LEFT JOIN `' . _DB_PREFIX_ . 'employee` e ON (n.id_employee = e.id_employee)
-            WHERE n.entity_type = "' . pSQL($entity_type) . '"
-            AND n.entity_id = ' . (int) $entity_id . '
-            ORDER BY n.date_add DESC
-        ');
-    }
-
-    public function getAdminLink($controller, $method = 'index')
-    {
-        try {
-            $router = SymfonyContainer::getInstance()->get('router');
-            $routeName = 'mpnotes_' . strtolower($controller) . '_' . strtolower($method ?? 'index');
-
-            // Verifica se la route esiste
-            $routeCollection = $router->getRouteCollection();
-            if ($routeCollection && $routeCollection->get($routeName)) {
-                $url = $router->generate($routeName);
-                return $url;
-            } else {
-                // Fallback per compatibilità
-                return $this->context->link->getAdminLink($controller);
-            }
-        } catch (Exception $e) {
-            // Fallback in caso di errore
-            return null;
-        }
+        return [
+            'success' => true,
+            'message' => 'Tabelle troncate con successo',
+        ];
     }
 }

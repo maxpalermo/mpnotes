@@ -27,409 +27,225 @@ use MpSoft\MpNotes\Models\ModelMpNoteAttachment;
 class ImportFromV16
 {
     private $module;
-    private $url;
-    private $token;
-    private $flash_message;
-    private $flash_type;
     private $id_employee;
-    private $errors;
-
-    private const TYPE_CUSTOMER = 1;
-    private const TYPE_ORDER = 2;
-    private const TYPE_EMBROIDERY = 3;
+    private $errors = [];
 
     public function __construct($module)
     {
         $this->module = $module;
-        $this->url = \Configuration::get('MP_REQUEST_API_URL');
-        $this->token = \Configuration::get('MP_REQUEST_API_TOKEN');
         $this->id_employee = (int) \Context::getContext()->employee->id;
-        $this->errors = [];
     }
 
-    private function getTableNoteFields()
+    public function importCustomerArchive($list)
     {
+        $imported = 0;
+        foreach ($list as $item) {
+            $model = new ModelMpNote();
+            $model->hydrate($item);
+            try {
+                $model->add();
+                $imported++;
+            } catch (\Throwable $th) {
+                $this->errors[] = [
+                    'item' => $item,
+                    'error' => $th->getMessage()
+                ];
+            }
+        }
+
         return [
-            'id_history',
-            'type',
-            'reference',
-            'id_customer',
-            'id_order',
-            'id_employee',
-            'employee_firstname',
-            'employee_lastname',
-            'gravity',
-            'content',
-            'printable',
-            'chat',
-            'deleted',
-            'date_add',
-            'date_upd',
+            'imported' => $imported,
+            'errors' => $this->errors
         ];
     }
 
-    private function getTableNoteAttachmentFields()
+    public function importCustomerArchiveItem($list)
     {
+        $imported = 0;
+        foreach ($list as $item) {
+            $model = new ModelMpNoteAttachment();
+            $model->hydrate($item);
+            try {
+                $model->add();
+                $imported++;
+                $item['id'] = $model->id;
+                $this->updateCustomerArchiveItem($item);
+            } catch (\Throwable $th) {
+                $this->errors[] = [
+                    'item' => $item,
+                    'error' => $th->getMessage()
+                ];
+            }
+        }
+
         return [
-            'id_history',
-            'type',
-            'id_mpnote',
-            'reference',
-            'id_customer',
-            'id_order',
-            'id_employee',
-            'employee_firstname',
-            'employee_lastname',
-            'filename',
-            'filetitle',
-            'file_ext',
-            'deleted',
-            'date_add',
-            'date_upd'
+            'imported' => $imported,
+            'errors' => $this->errors
         ];
     }
 
-    public function truncate()
+    public function importCustomerMessages($list)
+    {
+        $imported = 0;
+        foreach ($list as $item) {
+            $model = new ModelMpNote();
+            $model->hydrate($item);
+            try {
+                $model->add();
+                $imported++;
+            } catch (\Throwable $th) {
+                $this->errors[] = [
+                    'item' => $item,
+                    'error' => $th->getMessage()
+                ];
+            }
+        }
+
+        return [
+            'imported' => $imported,
+            'errors' => $this->errors
+        ];
+    }
+
+    public function updateCustomerArchiveItem($item)
     {
         $db = \Db::getInstance();
-        $db->execute('TRUNCATE TABLE `' . _DB_PREFIX_ . ModelMpNote::$definition['table'] . '`');
-        $db->execute('TRUNCATE TABLE `' . _DB_PREFIX_ . ModelMpNoteAttachment::$definition['table'] . '`');
+        $table = _DB_PREFIX_ . 'mpnote';
+        $table_att = _DB_PREFIX_ . 'mpnote_attachment';
+        $sql = "select id_mpnote from {$table} where id_import={$item['id_parent']} and reference='customer_archive'";
+        $id_mpnote = $db->getValue($sql);
 
-        $this->flash_message = $this->module->l('Truncate eseguito con successo');
-        $this->flash_type = 'success';
-    }
-
-    public function getDataCustomerMessages($limit = 1000, $offset = 0)
-    {
-        $pfx = $this->getPrefix();
-
-        $query = "
-            SELECT
-                0 as id_history,
-                'customer' as type,
-                null as reference,
-                a.id_customer,
-                0 as id_order,
-                a.id_employee,
-                upper(b.firstname) as employee_firstname,
-                upper(b.lastname) as employee_lastname,
-                'info' as gravity,
-                a.message as content,
-                0 as printable,
-                0 as chat,
-                0 as deleted,
-                a.date_add,
-                null as date_upd
-            FROM
-                `{$pfx}customer_messages` a
-            LEFT JOIN
-                `{$pfx}employee` b
-                ON
-                a.id_employee=b.id_employee
-            ORDER BY
-                date_add ASC, id_customer_messages ASC
-            LIMIT 
-                {$limit}
-            OFFSET 
-                {$offset}
-            ";
-
-        $data = $this->setQuery($query);
-
-        return $data;
-    }
-
-    public function getDataOrderMessages($limit = 1000, $offset = 0, $attachments = 0)
-    {
-        $pfx = $this->getPrefix();
-
-        if ($attachments) {
-            return $this->getDataOrderMessagesAttachments($limit, $offset);
+        if (!$id_mpnote) {
+            $sql = "select id_mpnote from {$table} where id_parent={$item['id_parent']} and reference='customer_archive'";
+            $id_mpnote = $db->getValue($sql);
         }
 
-        $query = "
-            SELECT
-                0 as id_history,
-                'order' as type,
-                a.id_mp_customer_order_notes as reference,
-                0 as id_customer,
-                a.id_order,
-                a.id_employee,
-                upper(b.firstname) as employee_firstname,
-                upper(b.lastname) as employee_lastname,
-                'info' as gravity,
-                a.content,
-                a.printable,
-                a.chat,
-                a.deleted,
-                a.date_add,
-                null as date_upd
-            FROM
-                `{$pfx}mp_customer_order_notes` a
-            LEFT JOIN
-                `{$pfx}employee` b
-                ON
-                a.id_employee=b.id_employee
-            ORDER BY
-                a.date_add ASC, a.id_mp_customer_order_notes ASC
-            LIMIT 
-                {$limit}
-            OFFSET 
-                {$offset}
-            ";
-
-        $data = $this->setQuery($query);
-
-        return $data;
-    }
-
-    protected function getDataOrderMessagesAttachments($limit, $offset)
-    {
-        $pfx = $this->getPrefix();
-
-        $query = "
-            SELECT
-                0 as id_history,
-                'order' as type,
-                null as id_mpnote,
-                a.id_mp_customer_order_notes as reference,
-                null as id_customer,
-                a.id_order,
-                0 as id_employee,
-                '' as employee_firstname,
-                '' as employee_lastname,
-                a.filename,
-                a.filetitle,
-                a.file_ext,
-                0 as deleted,
-                NOW() as date_add,
-                null as date_upd
-            FROM
-                `{$pfx}mp_customer_order_notes_attachments` a
-            ORDER BY
-                id_mp_customer_order_notes_attachments
-            LIMIT 
-                {$limit}
-            OFFSET 
-                {$offset}
-            ";
-
-        $data = $this->setQuery($query);
-
-        return $data;
-    }
-
-    public function getDataEmbroideryMessages($limit = 1000, $offset = 0, $attachments = false)
-    {
-        $pfx = $this->getPrefix();
-
-        if ($attachments) {
-            return $this->getDataEmbroideryMessagesAttachments($limit, $offset);
+        if (!$id_mpnote) {
+            return 0;
         }
 
-        $query = "
-            SELECT
-                a.id_history,
-                'embroidery' as type,
-                a.id_customer_archive as reference,
-                a.id_customer,
-                a.id_order,
-                a.id_employee,
-                upper(b.firstname) as employee_firstname,
-                upper(b.lastname) as employee_lastname,
-                'info' as gravity,
-                a.note as content,
-                a.printable,
-                0 as `chat`,
-                IF(a.date_del = '0000-00-00 00:00:00', 0, 1) as deleted,
-                a.date_add,
-                null as date_upd
-            FROM
-                `{$pfx}customer_archive` a
-            LEFT JOIN
-                `{$pfx}employee` b
-                ON
-                a.id_employee=b.id_employee
-            ORDER BY
-                a.date_add ASC, a.id_customer_archive ASC
-            LIMIT 
-                {$limit}
-            OFFSET 
-                {$offset}
-            ";
+        $sql = "update {$table_att} set id_mpnote={$id_mpnote} where id_mpnote_attachment={$item['id']}";
 
-        $data = $this->setQuery($query);
-
-        return $data;
+        return $db->execute($sql);
     }
 
-    protected function getDataEmbroideryMessagesAttachments($limit, $offset)
+    public function importCustomerPrivateNotes($list)
     {
-        $pfx = $this->getPrefix();
+        $imported = 0;
+        foreach ($list as $item) {
+            $model = new ModelMpNote();
+            $model->hydrate($item);
+            try {
+                $model->add();
+                $imported++;
+            } catch (\Throwable $th) {
+                $this->errors[] = [
+                    'item' => $item,
+                    'error' => $th->getMessage()
+                ];
+            }
+        }
 
-        $query = "
-            SELECT
-                0 as id_history,
-                'embroidery' as type,
-                null as id_mpnote,
-                a.id_customer_archive as reference,
-                null as id_customer,
-                null as id_order,
-                0 as id_employee,
-                '' as employee_firstname,
-                '' as employee_lastname,
-                a.path as filename,
-                a.path as filetitle,
-                a.type as file_ext,
-                0 as deleted,
-                a.date_add,
-                null as date_upd
-            FROM
-                `{$pfx}customer_archive_item` a
-            ORDER BY
-                id_customer_archive_item
-            LIMIT 
-                {$limit}
-            OFFSET 
-                {$offset}
-            ";
-
-        $data = $this->setQuery($query);
-
-        return $data;
+        return [
+            'imported' => $imported,
+            'errors' => $this->errors
+        ];
     }
 
-    public function getCountRows($tablename)
+    public function importMpCustomerOrderNotes($list)
     {
-        $pfx = $this->getPrefix();
-        $tablename = "{$pfx}{$tablename}";
-
-        $query = "SELECT COUNT(*) as total_rows FROM {$tablename}";
-
-        $data = $this->setQuery($query);
-
-        if ($data) {
-            return (int) $data[0]['total_rows'];
+        $imported = 0;
+        foreach ($list as $item) {
+            $model = new ModelMpNote();
+            $model->hydrate($item);
+            try {
+                $model->add();
+                $imported++;
+            } catch (\Throwable $th) {
+                $this->errors[] = [
+                    'item' => $item,
+                    'error' => $th->getMessage()
+                ];
+            }
         }
+
+        return [
+            'imported' => $imported,
+            'errors' => $this->errors
+        ];
     }
 
-    protected function getPrefix()
+    public function importMpCustomerOrderNotesAttachments($list)
     {
-        $pfx = \Configuration::get('MP_REQUEST_API_DB_PREFIX');
-        if (!$pfx) {
-            $pfx = _DB_PREFIX_;
+        $imported = 0;
+        foreach ($list as $item) {
+            $model = new ModelMpNoteAttachment();
+            $model->hydrate($item);
+            try {
+                $model->add();
+                $imported++;
+                $item['id'] = $model->id;
+                $this->updateMpCustomerOrderNotesAttachments($item);
+            } catch (\Throwable $th) {
+                $this->errors[] = [
+                    'item' => $item,
+                    'error' => $th->getMessage()
+                ];
+            }
         }
 
-        return $pfx;
+        return [
+            'imported' => $imported,
+            'errors' => $this->errors
+        ];
     }
 
-    public function setQuery($query)
+    public function updateMpCustomerOrderNotesAttachments($item)
     {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_ENCODING, '');
-        curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, 'token=' . $this->token . '&query=' . $query);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/x-www-form-urlencoded'
-        ]);
-
-        $response = curl_exec($ch);
-
-        curl_close($ch);
-
-        if ($response === false) {
-            $this->flash_message = $this->module->l('Errore nella richiesta');
-            $this->flash_type = 'danger';
-            return false;
-        }
-
-        $this->flash_message = $this->module->l('Richiesta effettuata con successo');
-        $this->flash_type = 'success';
-
-        $data = json_decode($response, true);
-        if (!$data['success']) {
-            $this->flash_message = $this->module->l('Errore nella richiesta');
-            $this->flash_type = 'danger';
-
-            return false;
-        }
-
-        // Decodifico i dati base64
-        $base64 = base64_decode($data['data']);
-        // Decodifico i dati json
-        $data = json_decode($base64, true);
-
-        return $data;
-    }
-
-    public function doImport($dataJson, $attachments = false)
-    {
-        $pfx = _DB_PREFIX_;
-        $table = ModelMpNote::$definition['table'];
-        if ($attachments) {
-            $table .= '_attachment';
-        }
         $db = \Db::getInstance();
-        // Controllo se il dato è di tipo json o array
+        $table = _DB_PREFIX_ . 'mpnote';
+        $table_att = _DB_PREFIX_ . 'mpnote_attachment';
+        $sql = "select
+                id_mpnote,
+                id_employee,
+                id_customer,
+                customer_firstname,
+                customer_lastname,
+                employee_firstname,
+                employee_lastname
+            from
+                {$table}
+            where
+                id_import={$item['id_parent']} and reference='mp_customer_order_notes'";
+        $mpnote = $db->getRow($sql);
 
-        if (!is_array($dataJson)) {
-            $data = json_decode($dataJson, true);
-        } else {
-            $data = $dataJson;
+        if (!$mpnote) {
+            $sql = "select id_mpnote from {$table} where id_parent={$item['id_parent']} and reference='mp_customer_order_notes'";
+            $mpnote = $db->getRow($sql);
         }
 
-        if (!$data) {
-            $this->flash_message = $this->module->l('Nessun dato da importare');
-            $this->flash_type = 'warning';
-
-            return true;
+        if (!$mpnote) {
+            return 0;
         }
 
-        if (isset($data['success']) && $data['success'] == 0) {
-            $this->flash_message = $data['message'];
-            $this->flash_type = 'danger';
+        $sql = "
+            update
+                {$table_att}
+            set
+                id_mpnote={$mpnote['id_mpnote']},
+                id_employee={$mpnote['id_employee']},
+                id_customer={$mpnote['id_customer']},
+                customer_firstname='{$mpnote['customer_firstname']}',
+                customer_lastname='{$mpnote['customer_lastname']}',
+                employee_firstname='{$mpnote['employee_firstname']}',
+                employee_lastname='{$mpnote['employee_lastname']}'
+            where id_mpnote_attachment={$item['id']}";
 
-            return false;
-        }
+        return $db->execute($sql);
+    }
 
-        if (!$attachments) {
-            $INSERT = "
-                INSERT INTO {$pfx}{$table}
-                    (id_history, type, reference, id_customer, id_order, id_employee, employee_firstname, employee_lastname, gravity, content, printable, chat, deleted, date_add, date_upd)
-                VALUES
-            ";
-        } else {
-            $INSERT = "
-                INSERT INTO {$pfx}{$table}
-                    (id_history, type, id_mpnote, reference, id_customer, id_order, id_employee, employee_firstname, employee_lastname, filename, filetitle, file_ext, deleted, date_add, date_upd)
-                VALUES
-            ";
-        }
-        $VALUES = [];
-        foreach ($data as &$row) {
-            $rowInsert = '(' . implode(',', array_map(function ($value) {
-                $value = pSQL($value);
-                if ($value === null) {
-                    return 'NULL';
-                }
-                return "'{$value}'";
-            }, $row)) . ')';
-            $VALUES[] = $rowInsert;
-        }
-
-        $INSERT .= implode(',', $VALUES) . ';';
-        try {
-            $db->execute($INSERT);
-        } catch (\Throwable $th) {
-            $this->errors[] = "Errore durante l'inserimento del record: {$row['id_customer']}: {$th->getMessage()};\n{$INSERT}\n";
-        }
-
+    public function getErrors()
+    {
         return $this->errors;
     }
 }
