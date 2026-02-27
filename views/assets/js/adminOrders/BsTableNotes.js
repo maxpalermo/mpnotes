@@ -6,6 +6,7 @@ class BsTableNotes {
     table = null;
     type = null;
     id = null;
+    _searchBound = false;
 
     constructor(tableId, endpoint, orderId, customerId) {
         this.endpoint = endpoint;
@@ -68,6 +69,8 @@ class BsTableNotes {
             method: "post",
             contentType: "application/x-www-form-urlencoded",
             queryParams: function (params) {
+                const $search = $(self.table).closest(".bootstrap-table").find(".search input");
+                const liveSearch = $search.length ? $search.val() : params.search;
                 const searchParams = {
                     ajax: 1,
                     action: "fetchAllNotes",
@@ -75,7 +78,7 @@ class BsTableNotes {
                     type: self.type,
                     limit: params.limit,
                     offset: params.offset,
-                    search: params.search,
+                    search: liveSearch == null ? "" : String(liveSearch),
                     sort: params.sort == undefined ? "a.date_add" : params.sort,
                     order: params.order == undefined ? "desc" : params.order,
                     filter: params.filter == undefined ? "" : params.filter,
@@ -125,6 +128,7 @@ class BsTableNotes {
                 self.fixDropDownPagination();
                 self.setBootstrapTableIcons();
                 self.bindNewNote();
+                self.bindSearchClear();
                 self.updateColumnVisibility();
                 self.hideOldCustomerNotePanel();
             },
@@ -423,6 +427,25 @@ class BsTableNotes {
     bindButtons() {
         this.table.removeEventListener("click", this._onClick);
         this.table.addEventListener("click", this._onClick);
+    }
+
+    bindSearchClear() {
+        if (this._searchBound) {
+            return;
+        }
+
+        const $search = $(this.table).closest(".bootstrap-table").find(".search input");
+        if (!$search.length) {
+            return;
+        }
+
+        this._searchBound = true;
+        $search.off("input.mpnotesSearchClear");
+        $search.on("input.mpnotesSearchClear", (e) => {
+            if (String(e.target.value || "") === "") {
+                $(this.table).bootstrapTable("resetSearch", "");
+            }
+        });
     }
 
     async onClick(e) {
