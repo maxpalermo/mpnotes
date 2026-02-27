@@ -148,6 +148,7 @@ class AdminMpNotesController extends ModuleAdminController
 
         $id_employee = (int) Context::getContext()->employee->id;
         $employee = new Employee($id_employee);
+        $params['id_employee'] = (int) $id_employee;
         $params['employee_firstname'] = $employee->firstname;
         $params['employee_lastname'] = $employee->lastname;
 
