@@ -338,6 +338,7 @@ class BsTableNotes {
                 $table.bootstrapTable("showColumn", "attachments");
                 $table.bootstrapTable("showColumn", "date_add");
                 $table.bootstrapTable("hideColumn", "date_upd");
+                $table.bootstrapTable("showColumn", "action");
                 break;
             default:
                 break;
