@@ -72,7 +72,6 @@ class GridAttachment extends HTMLElement {
         const filesAttr = this.getAttribute("files");
         if (filesAttr != null) {
             this._files = this._parseFiles(filesAttr);
-            console.table(this._files);
         }
     }
 

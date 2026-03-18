@@ -16,7 +16,7 @@ class MpNotes extends Module implements WidgetInterface
     {
         $this->name = 'mpnotes';
         $this->tab = 'administration';
-        $this->version = '2.2.48';
+        $this->version = '2.2.56';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -379,6 +379,7 @@ class MpNotes extends Module implements WidgetInterface
         return $twig->render([
             'endpoint' => $this->context->link->getAdminLink('AdminMpNotes'),
             'id_customer' => (int) $params['id_customer'],
+            'isAdmin' => $this->context->employee->isSuperAdmin()
         ]);
     }
 

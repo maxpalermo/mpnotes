@@ -15,12 +15,14 @@
                 <td>{{ note.date_add | date('d/m/Y H:i:s') }}</td>
                 <td>{{ note.employee_firstname }} {{ note.employee_lastname }}</td>
                 <td>
-                    <button class="btn btn-primary btn-sm" onclick="editNoteDetails({{ note.id_mpnote }})" title="modifica">
-                        <span class="material-icons">edit</span>
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteNote({{ note.id_mpnote }})" title="elimina">
-                        <span class="material-icons">delete</span>
-                    </button>
+                    {% if isAdmin %}
+                        <button class="btn btn-primary btn-sm" onclick="editNoteDetails({{ note.id_mpnote }})" title="modifica">
+                            <span class="material-icons">edit</span>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteNote({{ note.id_mpnote }})" title="elimina">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    {% endif %}
                 </td>
             </tr>
         {% endfor %}

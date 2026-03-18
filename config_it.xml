@@ -2,7 +2,7 @@
 <module>
     <name>mpnotes</name>
     <displayName><![CDATA[MP Gestione note]]></displayName>
-    <version><![CDATA[2.2.36]]></version>
+    <version><![CDATA[2.2.48]]></version>
     <description><![CDATA[Gestisci le note per vari tipi di messaggio]]></description>
     <author><![CDATA[Massimiliano Palermo]]></author>
     <tab><![CDATA[administration]]></tab>

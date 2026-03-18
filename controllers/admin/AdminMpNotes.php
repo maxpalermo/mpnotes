@@ -230,6 +230,7 @@ class AdminMpNotesController extends ModuleAdminController
         $twig = new GetTwigEnvironment($this->module->name);
         $template = $twig->load('@ModuleTwig/admin/customers/partials/adminCustomerTableNote.html.twig');
         $html = $template->render([
+            'isAdmin' => $this->context->employee->isSuperAdmin(),
             'notes' => $notes,
         ]);
 
@@ -628,10 +629,7 @@ class AdminMpNotesController extends ModuleAdminController
                     {$table}
                 SET
                     {$field} = IF({$field} = 0, 1, 0),
-                    date_upd = '{$date}',
-                    id_employee = {$employee_id},
-                    employee_firstname = '{$employee_firstname}',
-                    employee_lastname = '{$employee_lastname}'
+                    date_upd = '{$date}'
                 WHERE
                     id_mpnote = {$id}
             ");
